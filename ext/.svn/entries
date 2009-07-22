@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="903"
+   name=""
+   committed-date="2008-11-25T02:43:48.721804Z"
+   url="svn://rubyforge.org/var/svn/ruby-debug/trunk/ext"
+   last-author="rockyb"
+   kind="dir"
+   uuid="453b2852-3d18-0410-866e-d09c099698e4"
+   prop-time="2009-07-22T04:17:37.000000Z"
+   revision="922"/>
+<entry
+   committed-rev="875"
+   name="breakpoint.c"
+   text-time="2009-07-22T04:17:37.000000Z"
+   committed-date="2008-11-10T01:36:42.128866Z"
+   checksum="610f2bc56bc59a515db9e8de525ed38a"
+   last-author="kent"
+   kind="file"
+   prop-time="2009-07-22T04:17:37.000000Z"/>
+<entry
+   name="win32"
+   kind="dir"/>
+<entry
+   committed-rev="868"
+   name="extconf.rb"
+   text-time="2009-07-22T04:17:37.000000Z"
+   committed-date="2008-10-26T14:54:38.520757Z"
+   checksum="1ec25a00c190c70a6b837d93b97ef89e"
+   last-author="rockyb"
+   kind="file"
+   prop-time="2009-07-22T04:17:37.000000Z"/>
+<entry
+   committed-rev="903"
+   name="ruby_debug.c"
+   text-time="2009-07-22T04:17:37.000000Z"
+   committed-date="2008-11-25T02:43:48.721804Z"
+   checksum="11992694332647ca24287646f3f1ebf0"
+   last-author="rockyb"
+   kind="file"
+   prop-time="2009-07-22T04:17:37.000000Z"/>
+<entry
+   committed-rev="880"
+   name="ruby_debug.h"
+   text-time="2009-07-22T04:17:37.000000Z"
+   committed-date="2008-11-10T01:50:00.815934Z"
+   checksum="cf31ad547bcd4588c118fbd7113a73ac"
+   last-author="kent"
+   kind="file"
+   prop-time="2009-07-22T04:17:37.000000Z"/>
+</wc-entries>

@@ -1,0 +1,154 @@
+Building and Installing ruby-debug from rubyforge's Subversion Repository (svn)
+
+The below are Unix-centric instructions. If you have Microsoft Windows see 
+the section on building Microsoft Windows.
+
+
+0. Prerequisites: To build the package you'll need at a minimum:
+
+ - Ruby (of course). Currently only version 1.8.6 and above but not 
+   version 1.9.x work.
+ - Ruby development headers. This typically includes a file called "ruby.h"
+ - A C compiler like GNU C (gcc)
+ - Rake
+ - Subversion (svn)
+
+If you want to build the documentation and install Emacs files, you'll
+also need:
+
+ - a POSIX shell
+ - autoconf
+ - automake
+ - GNU Make
+ - texinfo
+
+1. Basic package checkout and installation 
+
+Check out the trunk of repository following the instructions at 
+http://rubyforge.org/scm/?group_id=1900  For example on a Unixy system,
+this may work:
+
+  mkdir ruby-debug
+  cd ruby-debug
+  svn checkout svn://rubyforge.org/var/svn/ruby-debug/trunk trunk
+
+In order to make the Ruby gems, ruby-debug and ruby-debug-base, get
+yourself into the trunk directory after the code has been checked out and run:
+
+  cd trunk # This is the same trunk checked out above.
+  rake package
+
+If all goes well you should have some gem files put in the directory
+pkg. Use the gem command to install that. 
+
+  sudo gem install ruby-debug-*.gem   # See gem help for other possibilities
+
+If all goes well the rdebug script has been installed ruby-debug is
+now ready to run. But if everything goes well you might want to run
+the built-in regression tests to make sure everything is okay.
+See step 3 below.
+
+If the gem install didn't work,'t there may be a problem with your C
+compiler or the Ruby headers are not installed.
+
+2. Trying out without installing. 
+
+You don't have to build a gem file to try out ruby debug. In fact when
+developing new features for ruby-debug, developers often you want to
+try it out *before* installing.  If you have a problem in the latter
+part of step 1 you may want to try this approach since we go into a
+little more detail as to what happens under the covers when you do the
+gem install.
+
+Run (from trunk)
+  rake lib
+
+This creates a Makefile and builds the ruby-debug shared library. (On
+Unix the name is ruby_debug.so).
+
+Once this is done you can run the debugger as you would rdebug using the
+script rdbg.rb. For example (again from trunk)
+
+  ./rdbg.rb ~/my-ruby-program.rb
+
+3. Running the Regression tests
+  
+We've put together some basic tests to make sure ruby-debug is doing
+what we think it should do. To run these (from trunk):
+
+  rake test
+
+If you didn't build the ruby-debug shared library and skipped step 2,
+don't worry "rake test" will do step 2 for you. You should see a line that
+ends something like:
+
+  Finished in 2.767579 seconds.
+
+  12 tests, 35 assertions, 0 failures, 0 errors
+
+The number of seconds, tests, and assertions may be different from the
+above. However you *should* see exactly "0 failures, 0 errors".
+
+4. Building the documentation and testing/installing Emacs files
+
+Of course, I recommend you read the ruby-debug manual that comes with
+the package. If you have the prerequisites described above, run this
+once:
+  sh ./autogen.sh
+
+Then run:
+  ./configure
+  make
+  make test           # Runs Emacs regression tests
+  sudo make install   # Or arrange to do this as root
+ 
+
+Microsoft Windows
+
+A problem here seems to be that the "One-click" install is compiled
+using Microsoft Visual Studio C 6 which is not sold anymore and is
+rather old. 
+
+Instead I suggest building via mingw/msys. 
+http://eigenclass.org/hiki.rb?cmd=view&p=cross+compiling+rcovrt&key=mingw has instructions on how to do. Some amendments to these instructions. 
+
+First, those instructions are a little GNU/Linux centric. If you are
+using Ubuntu or Debian, then this should be the easiest to follow the
+instructions. On Ubuntu or Debian there is a mingw3 Debian
+package. Installing that will give you the cross compiler that is a
+prerequisite. Alternatively if you are running MS Windows I notice
+that cygwin also has a mingw package. Or possibly you could use MinGW
+directly. For other OS's you might have to build a cross-compiler,
+i.e. gcc which emits win32 code and can create a win32 DLL.
+
+After you have a cross compiler you need to download the Ruby source
+and basically build a ruby interpreter. The cross-compile.sh script
+works although when I downloaded it, it had lots of blank space at the
+beginning which will mess up the Unix magic interpretation. That is
+remove the blanks in front of "#/bin/sh"
+
+On my system, this script fails in running "make ruby" because the
+fake.rb that got created needed to have a small change:
+
+	    ALT_SEPARATOR = "\"; \
+should be 
+	    ALT_SEPARATOR = "\\"; \
+
+After fixing this, run 
+  make ruby
+Also, I needed to run
+  make rubyw
+
+And then "make install" as indicated. 
+
+Once all of that's in place, the place you want be is in
+ruby-debug/trunk/ext/win32, not ruby-debug/ext. 
+
+So let's say you've installed the cross-compiled install ruby in
+/usr/local/ruby-mingw32/. Here then are the commands to build ruby-debug-base-xxx-mswin32.gem
+
+   cd .../ruby-debug/trunk/ext/win32 
+   ruby -I /usr/local/ruby-mingw32/lib/ruby/1.8/i386-mingw32 ../extconf.rb
+   make # Not rake
+   cd ../..   # back in ruby-debug/trunk
+   rake win32_gem

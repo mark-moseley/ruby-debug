@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="762"
+   name=""
+   committed-date="2008-03-16T16:38:14.456385Z"
+   url="svn://rubyforge.org/var/svn/ruby-debug/trunk/test/base"
+   last-author="rockyb"
+   kind="dir"
+   uuid="453b2852-3d18-0410-866e-d09c099698e4"
+   revision="922"/>
+<entry
+   committed-rev="762"
+   name="load.rb"
+   text-time="2009-07-22T04:17:36.000000Z"
+   committed-date="2008-03-16T16:38:14.456385Z"
+   checksum="ff1d1e6a04ea0f5ca24cdcf165254861"
+   last-author="rockyb"
+   kind="file"
+   prop-time="2009-07-22T04:17:36.000000Z"/>
+<entry
+   committed-rev="762"
+   name="base.rb"
+   text-time="2009-07-22T04:17:36.000000Z"
+   committed-date="2008-03-16T16:38:14.456385Z"
+   checksum="9767c3bcd5505911d7ff10bd6225d490"
+   last-author="rockyb"
+   kind="file"
+   prop-time="2009-07-22T04:17:36.000000Z"/>
+<entry
+   committed-rev="739"
+   name="binding.rb"
+   text-time="2009-07-22T04:17:36.000000Z"
+   committed-date="2008-03-02T02:48:24.924071Z"
+   checksum="ca090b650985ff86efc3ab317378da00"
+   last-author="rockyb"
+   kind="file"
+   prop-time="2009-07-22T04:17:36.000000Z"/>
+<entry
+   committed-rev="762"
+   name="catchpoint.rb"
+   text-time="2009-07-22T04:17:36.000000Z"
+   committed-date="2008-03-16T16:38:14.456385Z"
+   checksum="d20c8acb8b8baca1561b38169599b0c1"
+   last-author="rockyb"
+   kind="file"
+   prop-time="2009-07-22T04:17:36.000000Z"/>
+</wc-entries>

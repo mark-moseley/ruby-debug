@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="921"
+   name=""
+   committed-date="2009-04-11T16:34:47.393159Z"
+   url="svn://rubyforge.org/var/svn/ruby-debug/trunk/bin"
+   last-author="rockyb"
+   kind="dir"
+   uuid="453b2852-3d18-0410-866e-d09c099698e4"
+   revision="922"/>
+<entry
+   committed-rev="921"
+   name="rdebug"
+   text-time="2009-07-22T04:17:38.000000Z"
+   committed-date="2009-04-11T16:34:47.393159Z"
+   checksum="f3cf411948f1aceec91895d0db210e33"
+   last-author="rockyb"
+   kind="file"
+   prop-time="2009-07-22T04:17:38.000000Z"/>
+</wc-entries>

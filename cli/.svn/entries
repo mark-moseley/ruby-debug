@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="918"
+   name=""
+   committed-date="2009-04-04T08:42:45.368830Z"
+   url="svn://rubyforge.org/var/svn/ruby-debug/trunk/cli"
+   last-author="kent"
+   kind="dir"
+   uuid="453b2852-3d18-0410-866e-d09c099698e4"
+   revision="922"/>
+<entry
+   name="ruby-debug"
+   kind="dir"/>
+<entry
+   committed-rev="888"
+   name="ruby-debug.rb"
+   text-time="2009-07-22T04:17:38.000000Z"
+   committed-date="2008-11-14T15:32:22.855120Z"
+   checksum="b8bd9d628255a13adac7d9b5199b2619"
+   last-author="rockyb"
+   kind="file"
+   prop-time="2009-07-22T04:17:38.000000Z"/>
+</wc-entries>

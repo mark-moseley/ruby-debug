@@ -1,0 +1,10 @@
+K 10
+svn:ignore
+V 48
+.cvsignore
+*.elc
+Makefile.in
+elc-stamp
+Makefile
+
+END

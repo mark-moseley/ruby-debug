@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="905"
+   name=""
+   committed-date="2008-12-24T03:32:42.946465Z"
+   url="svn://rubyforge.org/var/svn/ruby-debug/trunk/test/cli"
+   last-author="rockyb"
+   kind="dir"
+   uuid="453b2852-3d18-0410-866e-d09c099698e4"
+   revision="922"/>
+<entry
+   name="commands"
+   kind="dir"/>
+</wc-entries>
