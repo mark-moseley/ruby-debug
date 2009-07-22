@@ -1,3 +1,10 @@
+#include <ruby.h>
+#include <stdio.h>
+#include <node.h>
+//#include <rubysig.h>
+#include <ruby/st.h>
+#include <ruby/intern.h>
+#include <vm_core.h>
 #include "ruby_debug.h"
 
 VALUE rdebug_breakpoints = Qnil;
@@ -9,7 +16,7 @@ static ID    idEval;
 static VALUE
 eval_expression(VALUE args)
 {
-    return rb_funcall2(rb_mKernel, idEval, 2, RARRAY(args)->ptr);
+    return rb_funcall2(rb_mKernel, idEval, 2, RARRAY_PTR(args));
 }
 
 int
@@ -97,9 +104,9 @@ check_breakpoints_by_pos(debug_context_t *debug_context, char *file, int line)
     if(check_breakpoint_by_pos(debug_context->breakpoint, file, line))
         return debug_context->breakpoint;
 
-    if(RARRAY(rdebug_breakpoints)->len == 0)
+    if(RARRAY_LEN(rdebug_breakpoints) == 0)
         return Qnil;
-    for(i = 0; i < RARRAY(rdebug_breakpoints)->len; i++)
+    for(i = 0; i < RARRAY_LEN(rdebug_breakpoints); i++)
     {
         breakpoint = rb_ary_entry(rdebug_breakpoints, i);
         if(check_breakpoint_by_pos(breakpoint, file, line))
@@ -120,9 +127,9 @@ check_breakpoints_by_method(debug_context_t *debug_context, VALUE klass, ID mid)
     if(check_breakpoint_by_method(debug_context->breakpoint, klass, mid))
         return debug_context->breakpoint;
 
-    if(RARRAY(rdebug_breakpoints)->len == 0)
+    if(RARRAY_LEN(rdebug_breakpoints) == 0)
         return Qnil;
-    for(i = 0; i < RARRAY(rdebug_breakpoints)->len; i++)
+    for(i = 0; i < RARRAY_LEN(rdebug_breakpoints); i++)
     {
         breakpoint = rb_ary_entry(rdebug_breakpoints, i);
         if(check_breakpoint_by_method(breakpoint, klass, mid))
@@ -178,7 +185,7 @@ create_breakpoint_from_args(int argc, VALUE *argv, int id)
     if(type == BP_POS_TYPE)
         breakpoint->pos.line = FIX2INT(pos);
     else
-        breakpoint->pos.mid = rb_intern(RSTRING(pos)->ptr);
+        breakpoint->pos.mid = rb_intern(RSTRING_PTR(pos));
     breakpoint->enabled = Qtrue;
     breakpoint->expr = NIL_P(expr) ? expr: StringValue(expr);
     breakpoint->hit_count = 0;
@@ -204,7 +211,7 @@ rdebug_remove_breakpoint(VALUE self, VALUE id_value)
 
     id = FIX2INT(id_value);
 
-    for( i = 0; i < RARRAY(rdebug_breakpoints)->len; i += 1 )
+    for( i = 0; i < RARRAY_LEN(rdebug_breakpoints); i += 1 )
     {
         breakpoint = rb_ary_entry(rdebug_breakpoints, i);
         Data_Get_Struct(breakpoint, debug_breakpoint_t, debug_breakpoint);

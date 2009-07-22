@@ -1,4 +1,3 @@
-#include <ruby.h>
 /* Context info */
 enum ctx_stop_reason {CTX_STOP_NONE, CTX_STOP_STEP, CTX_STOP_BREAKPOINT, 
 		      CTX_STOP_CATCHPOINT};
@@ -30,9 +29,10 @@ typedef struct {
     VALUE arg_ary;
     union {
         struct {
-            struct FRAME *frame;
-            struct SCOPE *scope;
-            struct RVarmap *dyna_vars;
+			rb_control_frame_t *cfp;
+			VALUE *bp;
+			struct rb_iseq_struct *block_iseq;
+			VALUE *block_pc;
         } runtime;
         struct {
             VALUE args;

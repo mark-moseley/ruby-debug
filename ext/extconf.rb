@@ -17,4 +17,12 @@ end
 
 # Temporary: to turn off optimization
 # $CFLAGS='-fno-strict-aliasing -g -fPIC'
-create_makefile("ruby_debug")
+
+dir_config("ruby")
+if have_header("node.h")
+  create_makefile("ruby_debug")
+else
+  STDERR.print("Makefile creation failed\n")
+  STDERR.print("try using option --with-ruby-include=<dir with node.h>\n")
+  exit(1)
+end
