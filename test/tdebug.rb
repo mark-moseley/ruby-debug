@@ -93,8 +93,8 @@ Usage: #{program} [options] <script.rb> -- <script.rb parameters>
 EOB
   opts.separator ""
   opts.separator "Options:"
-  opts.on("-A", "--annotate LEVEL", Integer, "Set annotation level") do 
-    |Debugger.annotate|
+  opts.on("-A", "--annotate LEVEL", Integer, "Set annotation level") do |s|
+    Debugger.annotate = s
   end
   opts.on("-d", "--debug", "Set $DEBUG=true") {$DEBUG = true}
   opts.on("--emacs-basic", "Activates basic Emacs mode") do 
@@ -130,7 +130,8 @@ EOB
       require name
     end
   end
-  opts.on("--script FILE", String, "Name of the script file to run") do |options.script| 
+  opts.on("--script FILE", String, "Name of the script file to run") do |s|
+    options.script = s
     unless File.exists?(options.script)
       puts "Script file '#{options.script}' is not found"
       exit

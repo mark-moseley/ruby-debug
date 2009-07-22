@@ -31,7 +31,8 @@ module TestHelper
     puts "'#{cmd}'" if $DEBUG
     output = `#{cmd}`
     
-    got_lines     = File.read(outfile).split(/\n/)
+    curr_path = Dir.pwd
+    got_lines     = File.read(outfile).split(/\n/).map{|s| s.sub(curr_path, '.') }
     correct_lines = File.read(rightfile).split(/\n/)
     filter.call(got_lines, correct_lines) if filter
     if cheap_diff(got_lines, correct_lines)
