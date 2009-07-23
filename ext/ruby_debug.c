@@ -6,6 +6,7 @@
 #include <vm_core.h>
 #include <iseq.h>
 #include <eval_intern.h>
+#include <version.h>
 #include "ruby_debug.h"
 
 #define DEBUG_VERSION "0.11"
@@ -17,7 +18,13 @@
 #define min(x,y) ((x) < (y) ? (x) : (y))
 #endif
 
+#if RUBY_VERSION_MAJOR == 1 && RUBY_VERSION_MINOR == 9 && RUBY_VERSION_TEENY == 1
+#define RUBY_VERSION_1_9_1
+#endif
+
 #define STACK_SIZE_INCREMENT 128
+
+extern int rb_vm_get_sourceline(const rb_control_frame_t *cfp); /* from vm.c */
 
 typedef struct {
     st_table *tbl;
@@ -127,10 +134,16 @@ real_class(VALUE klass)
 inline static void *
 ruby_method_ptr(VALUE class, ID meth_id)
 {
-    NODE *body, *method;
-    st_lookup(RCLASS_M_TBL(class), meth_id, (st_data_t *)&body);
-    method = (NODE *)body->u2.value;
-    return (void *)method->u2.node->u1.value;
+#ifdef RUBY_VERSION_1_9_1
+  NODE *body, *method;
+  st_lookup(RCLASS_M_TBL(class), meth_id, (st_data_t *)&body);
+  method = (NODE *)body->u2.value;
+  return (void *)method->u2.node->u1.value;
+#else
+  rb_method_entry_t * method;
+  method = rb_method_entry(class, meth_id);
+  return (void *)method->body.cfunc.func;
+#endif
 }
 
 inline static VALUE
@@ -616,7 +629,11 @@ debug_event_hook_inner(rb_event_flag_t _event, VALUE data, VALUE self, ID mid, V
   char *file = (char*)rb_sourcefile();
 	int line = rb_sourceline();
   int moved = 0;
+#ifdef RUBY_VERSION_1_9_1
 	NODE *node = NULL;
+#else
+  rb_method_entry_t *me = NULL;
+#endif
 	rb_thread_t *thread = GET_THREAD();
 	struct rb_iseq_struct *iseq = thread->cfp->iseq;
 
@@ -668,14 +685,14 @@ debug_event_hook_inner(rb_event_flag_t _event, VALUE data, VALUE self, ID mid, V
   locker = thread->self;
 
 	/* remove any frames that are now out of scope */
-	while(debug_context->stack_size > 0)
+  while(debug_context->stack_size > 0)
   {
-		if (debug_context->frames[debug_context->stack_size - 1].info.runtime.bp <= thread->cfp->bp)
-			break;
+	  if (debug_context->frames[debug_context->stack_size - 1].info.runtime.bp <= thread->cfp->bp)
+		  break;
     debug_context->stack_size--;
 	}
 
-    /* ignore a skipped section of code */
+  /* ignore a skipped section of code */
   if(CTX_FL_TEST(debug_context, CTX_FL_SKIPPED)) goto cleanup;
 
 	if ((_event == RUBY_EVENT_LINE) && (debug_context->stack_size > 0) && 
@@ -686,7 +703,11 @@ debug_event_hook_inner(rb_event_flag_t _event, VALUE data, VALUE self, ID mid, V
 		goto cleanup;
 	}
 
+#ifdef RUBY_VERSION_1_9_1
 	if(node)
+#else
+  if(me)
+#endif
     {
       if(debug == Qtrue)
           fprintf(stderr, "%s:%d [%s] %s\n", file, line, get_event_name(_event), rb_id2name(mid));
@@ -827,7 +848,11 @@ debug_event_hook_inner(rb_event_flag_t _event, VALUE data, VALUE self, ID mid, V
     case RUBY_EVENT_C_RETURN:
     {
         /* note if a block is given we fall through! */
+#ifdef RUBY_VERSION_1_9_1
         if(!node || !c_call_new_frame_p(klass, mid))
+#else
+        if(!me || !c_call_new_frame_p(klass, mid))
+#endif
             break;
     }
     case RUBY_EVENT_RETURN:
@@ -843,9 +868,9 @@ debug_event_hook_inner(rb_event_flag_t _event, VALUE data, VALUE self, ID mid, V
         }
         while(debug_context->stack_size > 0)
         {
-            debug_context->stack_size--;
-			if (debug_context->frames[debug_context->stack_size].info.runtime.bp <= GET_THREAD()->cfp->bp)
-                break;
+          debug_context->stack_size--;
+			    if (debug_context->frames[debug_context->stack_size].info.runtime.bp <= GET_THREAD()->cfp->bp)
+            break;
         }
         CTX_FL_SET(debug_context, CTX_FL_ENABLE_BKPT);
 
@@ -1791,6 +1816,7 @@ context_copy_locals(debug_frame_t *debug_frame, VALUE self)
 			rb_hash_aset(hash, rb_id2str(iseq->local_table[i]), *(cur_frame->dfp - iseq->local_size + i));
 	}
 
+#ifdef RUBY_VERSION_1_9_1 /* below segfaults in 1.9.2, will try to reproduce in 1.9.1 */
 	if (debug_frame->binding == Qnil) return(hash);
 
 	iseq = cur_frame->block_iseq;
@@ -1816,6 +1842,7 @@ context_copy_locals(debug_frame_t *debug_frame, VALUE self)
 			rb_hash_aset(hash, val, rb_f_eval(2, argv, self));
 		}
 	}
+#endif
 
 	return(hash);
 }
