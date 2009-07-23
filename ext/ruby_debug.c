@@ -1816,7 +1816,7 @@ context_copy_locals(debug_frame_t *debug_frame, VALUE self)
 			rb_hash_aset(hash, rb_id2str(iseq->local_table[i]), *(cur_frame->dfp - iseq->local_size + i));
 	}
 
-#ifdef RUBY_VERSION_1_9_1 /* below segfaults in 1.9.2, will try to reproduce in 1.9.1 */
+#if 0 /* causes segfaults; need to go back to the drawing board here */
 	if (debug_frame->binding == Qnil) return(hash);
 
 	iseq = cur_frame->block_iseq;
