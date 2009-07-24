@@ -651,7 +651,12 @@ debug_event_hook_inner(rb_event_flag_t _event, VALUE data, VALUE self, ID mid, V
 
   if (mid == ID_ALLOCATOR) return;
 
+
+#ifdef RUBY_VERSION_1_9_1
 	node = rb_method_node(klass, mid);
+#else
+    me = rb_method_entry(klass, mid);
+#endif
 
     /* return if thread is marked as 'ignored'.
        debugger's threads are marked this way
