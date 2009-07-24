@@ -2,8 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{ruby-debug-base}
-  s.version = "0.11.2"
-
+  s.version = "0.11.4"
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Kent Sibilev"]
   s.date = %q{2009-07-23}
@@ -21,14 +20,14 @@ handling, bindings for stack frames among other things.
     "AUTHORS",
     "CHANGES",
     "LICENSE",
-     "README",
-     "Rakefile",
-     "ext/extconf.rb",
-     "ext/breakpoint.c",
-     "ext/ruby_debug.h",
-     "ext/ruby_debug.c",
-     "lib/ruby-debug-base.rb",
-     "lib/ChangeLog"
+    "README",
+    "Rakefile",
+    "ext/extconf.rb",
+    "ext/breakpoint.c",
+    "ext/ruby_debug.h",
+    "ext/ruby_debug.c",
+    "lib/ruby-debug-base.rb",
+    "lib/ChangeLog"
   ]
   s.homepage = %q{http://rubyforge.org/projects/ruby-debug/}
   s.rdoc_options = ["--charset=UTF-8"]
@@ -44,6 +43,8 @@ handling, bindings for stack frames among other things.
     ]
   s.files += s.test_files
   s.extensions << "ext/extconf.rb"
+  s.add_dependency("mark-moseley-columnize", ">= 0.3.3")
+  s.add_dependency("mark-moseley-linecache", ">= 0.5.0")
 
   if s.respond_to? :specification_version then
     current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
@@ -55,3 +56,4 @@ handling, bindings for stack frames among other things.
   else
   end
 end
+
