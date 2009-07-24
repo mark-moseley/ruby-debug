@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{ruby-debug-base}
-  s.version = "0.11.4"
+  s.version = "0.11.5"
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Kent Sibilev"]
   s.date = %q{2009-07-23}
@@ -44,7 +44,7 @@ handling, bindings for stack frames among other things.
   s.files += s.test_files
   s.extensions << "ext/extconf.rb"
   s.add_dependency("mark-moseley-columnize", ">= 0.3.3")
-  s.add_dependency("mark-moseley-linecache", ">= 0.5.0")
+  s.add_dependency("mark-moseley-linecache", ">= 0.5.1")
 
   if s.respond_to? :specification_version then
     current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
