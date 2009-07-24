@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{ruby-debug-base}
-  s.version = "0.11"
+  s.version = "0.11.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Kent Sibilev"]
@@ -43,6 +43,7 @@ handling, bindings for stack frames among other things.
     "test/base/catchpoint.rb"
     ]
   s.files += s.test_files
+  s.extensions << "ext/extconf.rb"
 
   if s.respond_to? :specification_version then
     current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
