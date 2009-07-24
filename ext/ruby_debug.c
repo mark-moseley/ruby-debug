@@ -1801,7 +1801,7 @@ static VALUE
 context_copy_locals(debug_frame_t *debug_frame, VALUE self)
 {
 	int i;
-	rb_control_frame_t *cur_frame;
+	rb_control_frame_t *cur_frame, *block_frame;
 	rb_iseq_t *iseq;
 	VALUE hash;
 
@@ -1816,33 +1816,21 @@ context_copy_locals(debug_frame_t *debug_frame, VALUE self)
 			rb_hash_aset(hash, rb_id2str(iseq->local_table[i]), *(cur_frame->dfp - iseq->local_size + i));
 	}
 
-#if 0 /* causes segfaults; need to go back to the drawing board here */
-	if (debug_frame->binding == Qnil) return(hash);
-
+  block_frame = RUBY_VM_NEXT_CONTROL_FRAME(cur_frame);
 	iseq = cur_frame->block_iseq;
 	if ((iseq != NULL) && (iseq->local_table != NULL) && (iseq != cur_frame->iseq))
 	{
-		/* No idea where the dynamic variable values are in relation to cfp or block_iseq.
-		 * However, the variable names are in the block_iseq->local_table.
-		 * So we can let eval figure it out for us from the binding. */
-		VALUE argv[2];
-		char rescue_str[] = " rescue nil";
-		struct RString fake_str;
-		fake_str.basic.flags = T_STRING|RSTRING_NOEMBED|FL_FREEZE;
-		fake_str.basic.klass = rb_cString;
-		fake_str.as.heap.len = sizeof(rescue_str);
-		fake_str.as.heap.ptr = rescue_str;
-		fake_str.as.heap.aux.capa = sizeof(rescue_str);
-
-		argv[1] = debug_frame->binding;
-		for (i = 0; i < iseq->local_table_size; i++)
-		{
-			VALUE val = rb_id2str(iseq->local_table[i]);
-			argv[0] = rb_str_plus(val, (VALUE)&fake_str);
-			rb_hash_aset(hash, val, rb_f_eval(2, argv, self));
-		}
+    while (block_frame > GET_THREAD()->stack)
+    {
+      if (block_frame->iseq == cur_frame->block_iseq)
+      {
+  	  	for (i = 0; i < iseq->local_table_size; i++)
+	  	  	rb_hash_aset(hash, rb_id2str(iseq->local_table[i]), *(block_frame->dfp - iseq->local_table_size + i - 1));
+        return(hash);
+      }
+      block_frame = RUBY_VM_NEXT_CONTROL_FRAME(block_frame);
+    } 
 	}
-#endif
 
 	return(hash);
 }
