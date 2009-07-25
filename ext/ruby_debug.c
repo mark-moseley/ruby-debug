@@ -18,11 +18,8 @@
 #define min(x,y) ((x) < (y) ? (x) : (y))
 #endif
 
-#if RUBY_VERSION_MAJOR == 1 && RUBY_VERSION_MINOR == 9 && RUBY_VERSION_TEENY == 1
+#if RUBY_VERSION_MAJOR == 1 && RUBY_VERSION_MINOR == 9 && RUBY_VERSION_TEENY == 1 && RUBY_PATCHLEVEL > 0
 #define RUBY_VERSION_1_9_1
-#endif
-#if RUBY_PATCHLEVEL < 0
-#undef RUBY_VERSION_1_9_1
 #endif
 
 #define STACK_SIZE_INCREMENT 128
@@ -581,11 +578,11 @@ set_frame_source(rb_event_flag_t _event, debug_context_t *debug_context, VALUE s
 			  top_frame->binding = create_binding(self); /* block re-entered; need to rebind */
 		  }
 
-		top_frame->info.runtime.block_iseq = GET_THREAD()->cfp->block_iseq;
-        top_frame->self = self;
-        top_frame->file = file;
-        top_frame->line = line;
-        top_frame->id   = mid;
+		  top_frame->info.runtime.block_iseq = GET_THREAD()->cfp->block_iseq;
+      top_frame->self = self;
+      top_frame->file = file;
+      top_frame->line = line;
+      top_frame->id   = mid;
     }
 }
 
@@ -654,7 +651,6 @@ debug_event_hook_inner(rb_event_flag_t _event, VALUE data, VALUE self, ID mid, V
 
   if (mid == ID_ALLOCATOR) return;
 
-
 #ifdef RUBY_VERSION_1_9_1
 	node = rb_method_node(klass, mid);
 #else
@@ -711,25 +707,19 @@ debug_event_hook_inner(rb_event_flag_t _event, VALUE data, VALUE self, ID mid, V
 		goto cleanup;
 	}
 
-#ifdef RUBY_VERSION_1_9_1
-	if(node)
-#else
-  if(me)
-#endif
-    {
-      if(debug == Qtrue)
-          fprintf(stderr, "%s:%d [%s] %s\n", file, line, get_event_name(_event), rb_id2name(mid));
+  if(debug == Qtrue)
+    fprintf(stderr, "%s:%d [%s] %s\n", file, line, get_event_name(_event), rb_id2name(mid));
 
-      /* There can be many event calls per line, but we only want
-      *one* breakpoint per line. */
-      if(debug_context->last_line != line || debug_context->last_file == NULL ||
-          strcmp(debug_context->last_file, file) != 0)
-      {
-          CTX_FL_SET(debug_context, CTX_FL_ENABLE_BKPT);
-          moved = 1;
-      } 
-      else if(_event == RUBY_EVENT_LINE)
-      {
+  /* There can be many event calls per line, but we only want
+     *one* breakpoint per line. */
+  if(debug_context->last_line != line || debug_context->last_file == NULL ||
+    strcmp(debug_context->last_file, file) != 0)
+  {
+    CTX_FL_SET(debug_context, CTX_FL_ENABLE_BKPT);
+    moved = 1;
+  } 
+  else if(_event == RUBY_EVENT_LINE)
+  {
         /* There are two line-event trace hook calls per IF node - one
           before the expression eval an done afterwards. 
         */
@@ -745,16 +735,10 @@ debug_event_hook_inner(rb_event_flag_t _event, VALUE data, VALUE self, ID mid, V
             CTX_FL_SET(debug_context, CTX_FL_ENABLE_BKPT);
         }
         */
-      }
-    }
-    else
-    {
-        if(debug == Qtrue)
-            fprintf(stderr, "nodeless [%s] %s\n", get_event_name(_event), rb_id2name(mid));
-    }
-    
-    if(_event != RUBY_EVENT_LINE)
-        CTX_FL_SET(debug_context, CTX_FL_STEPPED);
+  }
+
+  if(_event != RUBY_EVENT_LINE)
+    CTX_FL_SET(debug_context, CTX_FL_STEPPED);
 
     switch(_event)
     {
@@ -1809,7 +1793,7 @@ static VALUE
 context_copy_locals(debug_frame_t *debug_frame, VALUE self)
 {
 	int i;
-	rb_control_frame_t *cur_frame, *block_frame;
+	rb_control_frame_t *cur_frame;
 	rb_iseq_t *iseq;
 	VALUE hash;
 
@@ -1824,10 +1808,10 @@ context_copy_locals(debug_frame_t *debug_frame, VALUE self)
 			rb_hash_aset(hash, rb_id2str(iseq->local_table[i]), *(cur_frame->dfp - iseq->local_size + i));
 	}
 
-  block_frame = RUBY_VM_NEXT_CONTROL_FRAME(cur_frame);
 	iseq = cur_frame->block_iseq;
 	if ((iseq != NULL) && (iseq->local_table != NULL) && (iseq != cur_frame->iseq))
-	{
+  {
+    rb_control_frame_t *block_frame = RUBY_VM_NEXT_CONTROL_FRAME(cur_frame);
     while (block_frame > GET_THREAD()->stack)
     {
       if (block_frame->iseq == cur_frame->block_iseq)
