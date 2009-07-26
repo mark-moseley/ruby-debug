@@ -9,14 +9,14 @@ Currently testing the debugger is on.
 # # Go to where we have a bad "inspect" of a local variable
 # continue 36
 info-var-bug.rb:36
-return x
+x
 # info variables
 self = main
 x = #<Lousy_inspect:0xb7825034>
 # # Go to where we have a bad "inspect" and "to_s" of a local variable
 # continue 40
 info-var-bug.rb:40
-return x
+x
 # info variables
 self = main
 x = *Error in evaluation*

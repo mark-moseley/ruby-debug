@@ -23,7 +23,7 @@ class TestEdit < Test::Unit::TestCase
     Dir.chdir(@@SRC_DIR) do 
       assert_equal(true, 
                    run_debugger(testname,
-                                "-nx --trace gcd.rb 3 5", nil, filter))
+                                "-nx --trace ./gcd.rb 3 5", nil, filter))
     end
   end
 
@@ -38,7 +38,7 @@ class TestEdit < Test::Unit::TestCase
       script = File.join('data', testname + '.cmd')
       assert_equal(true, 
                    run_debugger(testname,
-                                "--script #{script} -- gcd.rb 3 5", nil, 
+                                "--script #{script} -- ./gcd.rb 3 5", nil, 
                                 filter))
 
     end
@@ -55,7 +55,7 @@ class TestEdit < Test::Unit::TestCase
       script = File.join('data', testname + '.cmd')
       assert_equal(true, 
                    run_debugger(testname,
-                                "--script #{script} -- gcd.rb 3 5", nil, 
+                                "--script #{script} -- ./gcd.rb 3 5", nil, 
                                 filter))
 
     end

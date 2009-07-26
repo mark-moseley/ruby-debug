@@ -24,7 +24,7 @@ class TestSave < Test::Unit::TestCase
       script = File.join('data', testname + '.cmd')
       assert_equal(true, 
                    run_debugger(testname,
-                                "--script #{script} -- gcd.rb 3 5",
+                                "--script #{script} -- ./gcd.rb 3 5",
                                 nil, filter))
     end
   end

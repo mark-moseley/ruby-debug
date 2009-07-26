@@ -19,7 +19,7 @@ class TestBreakpoints < Test::Unit::TestCase
       script = File.join('data', testname + '.cmd')
       assert_equal(true, 
                    run_debugger(testname,
-                                "--script #{script} -- pm.rb"))
+                                "--script #{script} -- ./pm.rb"))
     end
   end
 end

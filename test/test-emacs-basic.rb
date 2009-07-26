@@ -20,7 +20,7 @@ class TestEmacsBasic < Test::Unit::TestCase
       script = File.join('data', testname + '.cmd')
       assert_equal(true, 
                    run_debugger(testname,
-                                "--emacs-basic --script #{script} -- gcd.rb 3 5"))
+                                "--emacs-basic --script #{script} -- ./gcd.rb 3 5"))
     end
   end
 end

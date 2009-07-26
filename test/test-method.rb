@@ -18,14 +18,14 @@ class TestMethod < Test::Unit::TestCase
       script = File.join('data', testname + '.cmd')
       assert_equal(true, 
                    run_debugger(testname,
-                                "--script #{script} -- classes.rb"))
+                                "--script #{script} -- ./classes.rb"))
       begin 
         require 'methodsig'
         testname='methodsig'
         script = File.join('data', testname + '.cmd')
         assert_equal(true, 
                      run_debugger(testname,
-                                  "--script #{script} -- classes.rb"))
+                                  "--script #{script} -- ./classes.rb"))
       rescue LoadError
         puts "Skipping method sig test"
       end

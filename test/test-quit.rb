@@ -24,7 +24,7 @@ class TestQuit < Test::Unit::TestCase
 #       }
       assert_equal(true, 
                    run_debugger(testname,
-                                "--script #{script} -- null.rb"))
+                                "--script #{script} -- ./null.rb"))
     end
   end
 end

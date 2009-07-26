@@ -19,7 +19,7 @@ class TestStartingAnnotate < Test::Unit::TestCase
       script = File.join('data', testname + '.cmd')
       assert_equal(true, 
                    run_debugger(testname,
-                                "-A 3 --script #{script} -- output.rb",
+                                "-A 3 --script #{script} -- ./output.rb",
                                 nil, nil, true))
     end
   end

@@ -30,11 +30,6 @@ class TestDollar0 < Test::Unit::TestCase
                                 nil, filter, false, '../bin/rdebug'))
       # Ruby's __FILE__ seems to prepend ./ when no directory was added.
       assert_equal(true, 
-                   run_debugger('dollar-0a', 
-                                '-nx --no-stop dollar-0.rb',
-                                nil, filter, false, '../bin/rdebug'))
-      # Ruby's __FILE__ seems to prepend ./ when no directory was added.
-      assert_equal(true, 
                    run_debugger('dollar-0b', 
                                 '-nx --no-stop ' + 
                                 File.join('..', 'test', 'dollar-0.rb'),

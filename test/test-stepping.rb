@@ -20,7 +20,7 @@ class TestStepping < Test::Unit::TestCase
       script = File.join('data', testname + '.cmd')
       assert_equal(true, 
                    run_debugger(testname,
-                                "--script #{script} -- gcd.rb 3 5"))
+                                "--script #{script} -- ./gcd.rb 3 5"))
     end
   end
 end

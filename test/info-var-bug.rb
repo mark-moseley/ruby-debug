@@ -33,11 +33,11 @@ class UnsuspectingClass
 end
 def test_Lousy_inspect
   x = Lousy_inspect.new
-  return x
+  x
 end
 def test_lousy_inspect_and_to_s
   x = Lousy_inspect_and_to_s.new
-  return x
+  x
 end
 x = test_Lousy_inspect
 y = test_lousy_inspect_and_to_s

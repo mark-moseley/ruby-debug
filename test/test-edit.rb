@@ -20,7 +20,7 @@ class TestEdit < Test::Unit::TestCase
       ENV['EDITOR']='echo FAKE-EDITOR '
       assert_equal(true, 
                    run_debugger(testname,
-                                "--script #{script} -- gcd.rb 3 5"))
+                                "--script #{script} -- ./gcd.rb 3 5"))
     end
   end
 end
