@@ -23,7 +23,7 @@ basename is on.
    12    if a == 1 or b-a == 0
    13      return a
    14    end
-   15    return gcd(b-a, a)
+   15    gcd(b-a, a)
    16  end
    17  
    18  gcd(3,5)
@@ -35,7 +35,7 @@ basename is on.
    12    if a == 1 or b-a == 0
    13      return a
    14    end
-   15    return gcd(b-a, a)
+   15    gcd(b-a, a)
    16  end
    17  
    18  gcd(3,5)
@@ -47,7 +47,7 @@ basename is on.
    12    if a == 1 or b-a == 0
    13      return a
    14    end
-   15    return gcd(b-a, a)
+   15    gcd(b-a, a)
    16  end
    17  
    18  gcd(3,5)
@@ -100,7 +100,7 @@ basename is on.
    5    # Make: a <= b
 # list 20
 [15, 24] in ./gcd.rb
-   15    return gcd(b-a, a)
+   15    gcd(b-a, a)
    16  end
    17  
    18  gcd(3,5)

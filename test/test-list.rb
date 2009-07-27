@@ -7,7 +7,7 @@ require 'test/unit'
 # Test List commands
 class TestList < Test::Unit::TestCase
 
-  @@src_dir = File.dirname(__FILE__)
+  @@src_dir = File.join(Dir.pwd, File.dirname(__FILE__))
 
   require File.join(@@src_dir, 'helper')
   include TestHelper

@@ -7,7 +7,7 @@ require 'test/unit'
 # Test that linetracing does something.
 class TestStepping < Test::Unit::TestCase
 
-  @@SRC_DIR = File.dirname(__FILE__) unless 
+  @@SRC_DIR = File.join(Dir.pwd, File.dirname(__FILE__)) unless
     defined?(@@SRC_DIR)
 
   require File.join(@@SRC_DIR, 'helper')

@@ -7,7 +7,7 @@ require 'test/unit'
 # Test --no-stop and $0 setting.
 class TestDollar0 < Test::Unit::TestCase
   
-  @@SRC_DIR = File.dirname(__FILE__) unless 
+  @@SRC_DIR = File.join(Dir.pwd, File.dirname(__FILE__)) unless
     defined?(@@SRC_DIR)
 
   require File.join(@@SRC_DIR, 'helper')

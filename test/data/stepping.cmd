@@ -10,7 +10,7 @@ set forcestep on
 step- ; step-
 set forcestep off
 where
-n 2
+next
 step+
 where
 step 3

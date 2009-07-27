@@ -61,5 +61,5 @@ Num Enb What
 # info file ./gcd.rb break
 File ./gcd.rb
 	breakpoint line numbers:
-4  6  6  7  10  10  12  12  13  15  18
+4  6  7  10  12  13  15  18
 # quit

@@ -12,7 +12,7 @@ def gcd(a, b)
   if a == 1 or b-a == 0
     return a
   end
-  return gcd(b-a, a)
+  gcd(b-a, a)
 end
 
 gcd(3,5)

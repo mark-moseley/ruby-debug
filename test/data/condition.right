@@ -14,11 +14,11 @@ autoeval is off.
 Breakpoint 1 file ./gcd.rb, line 6
 # info break 
 Num Enb What
-  1 y   at gcd.rb:6 if a > b
+  1 y   at ./gcd.rb:6 if a > b
 # condition 1
 # info break 
 Num Enb What
-  1 y   at gcd.rb:6
+  1 y   at ./gcd.rb:6
 # break 12
 Breakpoint 2 file ./gcd.rb, line 12
 # condition 2 1 == a
@@ -31,8 +31,8 @@ gcd.rb:12
 if a == 1 or b-a == 0
 # info break
 Num Enb What
-  1 n   at gcd.rb:6
-  2 y   at gcd.rb:12 if 1 == a
+  1 n   at ./gcd.rb:6
+  2 y   at ./gcd.rb:12 if 1 == a
 	breakpoint already hit 1 time
 # p a
 1
@@ -42,24 +42,24 @@ Breakpoint 3 file ./gcd.rb, line 6
 *** Expression "a > " syntactically incorrect; breakpoint disabled.
 # info break
 Num Enb What
-  1 n   at gcd.rb:6
-  2 y   at gcd.rb:12 if 1 == a
+  1 n   at ./gcd.rb:6
+  2 y   at ./gcd.rb:12 if 1 == a
 	breakpoint already hit 1 time
-  3 n   at gcd.rb:6 if a > 
+  3 n   at ./gcd.rb:6 if a > 
 # enable 3
 *** Expression "a > " syntactically incorrect; breakpoint remains disabled.
 # info break
 Num Enb What
-  1 n   at gcd.rb:6
-  2 y   at gcd.rb:12 if 1 == a
+  1 n   at ./gcd.rb:6
+  2 y   at ./gcd.rb:12 if 1 == a
 	breakpoint already hit 1 time
-  3 n   at gcd.rb:6 if a > 
+  3 n   at ./gcd.rb:6 if a > 
 # condition 3 a > 5
 # enable 3
 # info break
 Num Enb What
-  1 n   at gcd.rb:6
-  2 y   at gcd.rb:12 if 1 == a
+  1 n   at ./gcd.rb:6
+  2 y   at ./gcd.rb:12 if 1 == a
 	breakpoint already hit 1 time
-  3 y   at gcd.rb:6 if a > 5
+  3 y   at ./gcd.rb:6 if a > 5
 # quit

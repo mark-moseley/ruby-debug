@@ -83,7 +83,7 @@ Num Enb What
 display
 
 stack
---> #0 Object.gcd(a#Fixnum, b#Fixnum) at line gcd.rb:6
+--> #0 Object.gcd(a#Fixnum, b#Fixnum) at line gcd.rb:10
     #1 at line gcd.rb:18
 
 variables
@@ -91,8 +91,8 @@ a = 3
 b = 5
 self = main
 
-source gcd.rb:6
-if a > b
+source gcd.rb:10
+return nil if a <= 0
 # # Test error annotations
 # up 10
 error-begin
@@ -101,7 +101,7 @@ Adjusting would put us beyond the oldest (initial) frame.
 display
 
 stack
---> #0 Object.gcd(a#Fixnum, b#Fixnum) at line gcd.rb:6
+--> #0 Object.gcd(a#Fixnum, b#Fixnum) at line gcd.rb:10
     #1 at line gcd.rb:18
 
 variables
@@ -116,7 +116,7 @@ Adjusting would put us beyond the oldest (initial) frame.
 display
 
 stack
---> #0 Object.gcd(a#Fixnum, b#Fixnum) at line gcd.rb:6
+--> #0 Object.gcd(a#Fixnum, b#Fixnum) at line gcd.rb:10
     #1 at line gcd.rb:18
 
 variables

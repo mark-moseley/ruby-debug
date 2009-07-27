@@ -43,7 +43,7 @@ handling, bindings for stack frames among other things.
     ]
   s.files += s.test_files
   s.extensions << "ext/extconf.rb"
-  s.add_dependency("mark-moseley-columnize", ">= 0.3.3")
+  s.add_dependency("columnize", ">= 0.3.1")
   s.add_dependency("mark-moseley-linecache", ">= 0.5.1")
 
   if s.respond_to? :specification_version then

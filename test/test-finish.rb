@@ -7,7 +7,7 @@ require 'test/unit'
 # Test finish command
 class TestFinish < Test::Unit::TestCase
 
-  @@src_dir = File.dirname(__FILE__) unless 
+  @@src_dir = File.join(Dir.pwd, File.dirname(__FILE__)) unless
     defined?(@@src_dir)
 
   require File.join(@@src_dir, 'helper')

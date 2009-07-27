@@ -4,7 +4,7 @@
 # require 'ruby-debug' ; Debugger.start
 
 require 'test/unit'
-SRC_DIR = File.dirname(__FILE__) unless 
+SRC_DIR = File.join(Dir.pwd, File.dirname(__FILE__)) unless
   defined?(SRC_DIR)
 %w(ext lib cli).each do |dir|
   $: <<  File.join(SRC_DIR, '..', dir)

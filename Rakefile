@@ -53,7 +53,9 @@ BASE_FILES = COMMON_FILES + FileList[
 desc "Test everything."
 task :test => :test_base do 
   Rake::TestTask.new(:test) do |t|
-    t.libs << ['./ext', './lib', './cli']
+    t.libs << './ext'
+    t.libs << './lib'
+    t.libs << './cli'
     t.test_files = CLI_TEST_FILE_LIST
     t.verbose = true
   end
@@ -62,7 +64,8 @@ end
 desc "Test ruby-debug-base."
 task :test_base => :lib do 
   Rake::TestTask.new(:test_base) do |t|
-    t.libs << ['./ext', './lib']
+    t.libs << './ext'
+    t.libs << './lib'
     t.test_files = FileList[BASE_TEST_FILE_LIST]
     t.verbose = true
   end
