@@ -1,0 +1,61 @@
+next.rb:1
+def foo
+# # ********************************************************
+# # This tests variable display by scope
+# # ********************************************************
+# set debuggertesting on
+Currently testing the debugger is on.
+# set callstyle last
+Frame call-display style is last.
+# set force off
+force-stepping is off.
+# break 1
+Breakpoint 1 file ./next.rb, line 1
+# next
+next.rb:7
+a = 1
+# next
+next.rb:8
+if a == 1
+# next
+next.rb:9
+a += 2
+# next
+next.rb:10
+puts a
+# next
+3
+next.rb:12
+foo
+# next
+Breakpoint 1 at next.rb:1
+next.rb:1
+def foo
+# next
+next.rb:2
+a = 1
+# next
+next.rb:3
+puts "Stop here"
+# next
+Stop here
+next.rb:4
+b = 2
+# next
+next.rb:13
+b = 2
+# next
+next.rb:14
+b += 2
+# next
+next.rb:15
+puts "one"
+# next
+one
+next.rb:16
+c = 4
+# next
+next.rb:17
+puts "two"
+# next
+two

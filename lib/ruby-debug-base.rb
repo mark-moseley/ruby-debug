@@ -251,7 +251,7 @@ module Kernel
   #
   def binding_n(n = 0)
     Debugger.skip do
-      if RUBY_VERSION == "1.8.6"
+      if RUBY_VERSION < "1.9"
         Debugger.current_context.frame_binding(n+2)
       else
         Debugger.current_context.frame_binding(n+1)
