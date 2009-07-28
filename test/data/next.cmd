@@ -1,5 +1,5 @@
 # ********************************************************
-# This tests variable display by scope
+# This tests next command and break at proc def
 # ********************************************************
 set debuggertesting on
 set callstyle last

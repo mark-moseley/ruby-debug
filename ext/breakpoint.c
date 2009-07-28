@@ -1,10 +1,10 @@
 #include <ruby.h>
 #include <stdio.h>
 #include <node.h>
-//#include <rubysig.h>
 #include <ruby/st.h>
 #include <ruby/intern.h>
 #include <vm_core.h>
+#include <iseq.h>
 #include "ruby_debug.h"
 
 VALUE rdebug_breakpoints = Qnil;

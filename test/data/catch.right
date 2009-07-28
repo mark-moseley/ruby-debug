@@ -28,10 +28,10 @@ Catch exception ZeroDivisionError.
 # c
 Catchpoint at pm.rb:5: `divided by 0' (ZeroDivisionError)
 	from ../rdbg.rb:23:in `runner'
-	from ../rdbg.rb:32
+	from ../rdbg.rb:32:in `<main>'
 pm.rb:5
 1/0
 # where
---> #0 Object./ at line pm.rb:5
+--> #0 Object.zero_div at line pm.rb:5
     #1 at line pm.rb:8
 # quit

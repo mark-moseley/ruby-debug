@@ -1,7 +1,7 @@
 next.rb:1
 def foo
 # # ********************************************************
-# # This tests variable display by scope
+# # This tests next command and break at proc def
 # # ********************************************************
 # set debuggertesting on
 Currently testing the debugger is on.
