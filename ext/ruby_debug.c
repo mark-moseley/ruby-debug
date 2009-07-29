@@ -27,6 +27,7 @@
 #define STACK_SIZE_INCREMENT 128
 
 extern int rb_vm_get_sourceline(const rb_control_frame_t *cfp); /* from vm.c */
+extern VALUE rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE line, VALUE opt); /* from iseq.c */
 
 typedef struct {
     st_table *tbl;
@@ -385,7 +386,6 @@ debug_context_create(VALUE thread)
     debug_context->stack_size = 0;
     debug_context->thread_id = ref2id(thread);
     debug_context->breakpoint = Qnil;
-    debug_context->catch_table.caught = 0;
     if(rb_obj_class(thread) == cDebugThread)
         CTX_FL_SET(debug_context, CTX_FL_IGNORE);
     return Data_Wrap_Struct(cContext, debug_context_mark, debug_context_free, debug_context);
@@ -503,7 +503,6 @@ save_call_frame(rb_event_flag_t _event, debug_context_t *debug_context, VALUE se
     debug_frame->info.runtime.block_iseq = GET_THREAD()->cfp->block_iseq;
     debug_frame->info.runtime.block_pc = NULL;
     debug_frame->info.runtime.last_pc = GET_THREAD()->cfp->pc;
-    debug_frame->info.runtime.catch_table = NULL;
     if (RTEST(track_frame_args))
         copy_scalar_args(debug_frame);
 }
@@ -658,62 +657,23 @@ call_at_line_check(VALUE self, debug_context_t *debug_context, VALUE breakpoint,
 static struct iseq_catch_table_entry *
 create_catch_table(debug_context_t *debug_context, unsigned long cont)
 {
-    VALUE iseqval;
+    struct iseq_catch_table_entry *catch_table = &debug_context->catch_table.tmp_catch_table;
 
     GET_THREAD()->parse_in_eval++;
     GET_THREAD()->mild_compile_error++;
-    iseqval = rb_iseq_compile(rb_str_new_cstr("begin\nend"), rb_str_new_cstr("(exception catcher)"), INT2FIX(1));
+    /* compiling with option Qfalse (no options) prevents debug hook calls during this catch routine */
+    catch_table->iseq = rb_iseq_compile_with_option(
+        rb_str_new_cstr("begin\nend"), rb_str_new_cstr("(exception catcher)"), INT2FIX(1), Qfalse);
     GET_THREAD()->mild_compile_error--;
     GET_THREAD()->parse_in_eval--;
 
-    debug_context->catch_table_entry.type = CATCH_TYPE_RESCUE;
-    debug_context->catch_table_entry.iseq = iseqval;
-    debug_context->catch_table_entry.start = 0;
-    debug_context->catch_table_entry.end = ULONG_MAX;
-    debug_context->catch_table_entry.cont = cont - insn_len(BIN(trace));
-    debug_context->catch_table_entry.sp = 0;
+    catch_table->type = CATCH_TYPE_RESCUE;
+    catch_table->start = 0;
+    catch_table->end = ULONG_MAX;
+    catch_table->cont = cont - insn_len(BIN(trace));
+    catch_table->sp = 0;
 
-    return(&debug_context->catch_table_entry);
-
-#if 0
-    memset(&debug_context->catch_iseq, 0, sizeof(struct rb_iseq_struct));
-    memset(&debug_context->catch_cref_stack, 0, sizeof(struct RNode));
-
-    debug_context->catch_rdata.basic.flags = 12; // ???
-    debug_context->catch_rdata.basic.klass = 0; // FIXME
-    debug_context->catch_rdata.dmark = NULL;
-    debug_context->catch_rdata.dfree = NULL;
-    debug_context->catch_rdata.data = &debug_context->catch_iseq;
-
-    debug_context->catch_iseq.type = 5; // ???
-    debug_context->catch_iseq.name = rb_str_new_cstr("(exception catcher)");
-    debug_context->catch_iseq.filename = rb_str_new_cstr("(exception catcher)");
-    debug_context->catch_iseq.iseq = debug_context->iseq_insn;
-    debug_context->catch_iseq.iseq[0] = BIN(putnil);
-    debug_context->catch_iseq.iseq[1] = BIN(leave);
-    debug_context->catch_iseq.iseq_encoded = debug_context->iseq_insn;
-    debug_context->catch_iseq.iseq_size = 2;
-    debug_context->catch_iseq.mark_ary = rb_ary_new();
-    debug_context->catch_iseq.insn_info_table = (struct iseq_insn_info_entry*)&debug_context->catch_info_entry;
-    debug_context->catch_iseq.insn_info_size = 2;
-    debug_context->catch_iseq.local_size = 1;
-    debug_context->catch_iseq.arg_simple = 1;
-    debug_context->catch_iseq.arg_rest = -1;
-    debug_context->catch_iseq.arg_block = -1;
-    debug_context->catch_iseq.stack_max = 1;
-    debug_context->catch_iseq.local_iseq = &debug_context->catch_iseq;
-    debug_context->catch_iseq.self = (VALUE)&debug_context->catch_rdata;
-    debug_context->catch_iseq.cref_stack = &debug_context->catch_cref_stack;
-
-    debug_context->catch_info_entry[0].position = 0;
-    debug_context->catch_info_entry[0].line_no = 1;
-    debug_context->catch_info_entry[0].sp = 1;
-    debug_context->catch_info_entry[1].position = 1;
-    debug_context->catch_info_entry[1].line_no = 0;
-    debug_context->catch_info_entry[1].sp = 1;
-
-    debug_context->catch_cref_stack.flags = 1052; // ???
-#endif
+    return(catch_table);
 }
 
 static void
@@ -747,10 +707,6 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
 
     if (mid == ID_ALLOCATOR) return;
 
-    /* hack; need better way to do this */
-    if ((debug_context->catch_table.caught) && (strcmp(RSTRING_PTR(iseq->filename), "(exception catcher)") == 0))
-        return;
-
 #ifdef RUBY_VERSION_1_9_1
     node = rb_method_node(klass, mid);
 #else
@@ -759,14 +715,14 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
 
     /* return if thread is marked as 'ignored'.
        debugger's threads are marked this way
-    */
+     */
     if(CTX_FL_TEST(debug_context, CTX_FL_IGNORE)) return;
 
     while(1)
     {
-      /* halt execution of the current thread if the debugger
-         is activated in another
-      */
+        /* halt execution of the current thread if the debugger
+           is activated in another
+         */
         while(locker != Qnil && locker != thread->self)
         {
             add_to_locked(thread->self);
@@ -782,10 +738,10 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         else break;
     }
 
-  /* return if the current thread is the locker */
+    /* return if the current thread is the locker */
     if (locker != Qnil) return;
 
-  /* only the current thread can proceed */
+    /* only the current thread can proceed */
     locker = thread->self;
 
     /* remove any frames that are now out of scope */
@@ -796,12 +752,12 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         debug_context->stack_size--;
     }
 
-  /* ignore a skipped section of code */
+    /* ignore a skipped section of code */
     if(CTX_FL_TEST(debug_context, CTX_FL_SKIPPED)) goto cleanup;
 
     if ((event == RUBY_EVENT_LINE) && (debug_context->stack_size > 0) && 
         (get_top_frame(debug_context)->line == line) && (get_top_frame(debug_context)->info.runtime.cfp->iseq == iseq) &&
-        (get_top_frame(debug_context)->info.runtime.catch_table == NULL))
+        !CTX_FL_TEST(debug_context, CTX_FL_CATCHING))
     {
         /* Sometimes duplicate RUBY_EVENT_LINE messages get generated by the compiler.
          * Ignore them. */
@@ -811,7 +767,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     if(debug == Qtrue)
         fprintf(stderr, "%s:%d [%s] %s\n", file, line, get_event_name(event), rb_id2name(mid));
 
-  /* There can be many event calls per line, but we only want
+    /* There can be many event calls per line, but we only want
      *one* breakpoint per line. */
     if(debug_context->last_line != line || debug_context->last_file == NULL ||
        strcmp(debug_context->last_file, file) != 0)
@@ -819,24 +775,6 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         CTX_FL_SET(debug_context, CTX_FL_ENABLE_BKPT);
         moved = 1;
     } 
-    else if(event == RUBY_EVENT_LINE)
-    {
-        /* There are two line-event trace hook calls per IF node - one
-          before the expression eval an done afterwards. 
-        */
-        /* FIXME: the static variable can't be safely used here, since this method 
-        is re-entrant by multiple threads. If we want to provide this kind of functionality 
-        if_eval_event variable must be moved to debug_context structure.
-        */
-        /*
-        static int if_eval_event = 0;
-        if_eval_event = (NODE_IF == nd_type(node)) ? !if_eval_event : 0;
-        if (!if_eval_event)
-        {
-            CTX_FL_SET(debug_context, CTX_FL_ENABLE_BKPT);
-        }
-        */
-    }
 
     if(event != RUBY_EVENT_LINE)
         CTX_FL_SET(debug_context, CTX_FL_STEPPED);
@@ -850,18 +788,18 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         else
             set_frame_source(event, debug_context, self, file, line, mid);
 
-        if (debug_context->catch_table.caught)
+        if (CTX_FL_TEST(debug_context, CTX_FL_CATCHING))
         {
             debug_frame_t *top_frame = get_top_frame(debug_context);
-            rb_control_frame_t *cfp = top_frame->info.runtime.cfp;
-            int hit_count;
-
+            
             if (top_frame != NULL)
             {
+                rb_control_frame_t *cfp = top_frame->info.runtime.cfp;
+                int hit_count;
+
                 /* restore the proper catch table */
-                cfp->iseq->catch_table_size = debug_context->catch_table.catch_table_size;
-                cfp->iseq->catch_table = debug_context->catch_table.catch_table;
-                top_frame->info.runtime.catch_table = NULL;
+                cfp->iseq->catch_table_size = debug_context->catch_table.old_catch_table_size;
+                cfp->iseq->catch_table = debug_context->catch_table.old_catch_table;
                 
                 /* send catchpoint notification */
                 hit_count = INT2FIX(FIX2INT(rb_hash_aref(rdebug_catchpoints, 
@@ -876,7 +814,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
             }
 
             /* now allow the next exception to be caught */
-            debug_context->catch_table.caught = 0;
+            CTX_FL_UNSET(debug_context, CTX_FL_CATCHING);
             break;
         }
         
@@ -1006,16 +944,16 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
 
         expn_class = rb_obj_class(rb_errinfo());
 
-    /* This code goes back to the earliest days of ruby-debug. It
-       tends to disallow catching an exception via the
-       "catchpoint" command. To address this one possiblilty is to
-       move this after testing for catchponts. Kent however thinks
-       there may be a misfeature in Ruby's eval.c: the problem was
-       in the fact that Ruby doesn't reset exception flag on the
-       current thread before it calls a notification handler.
+        /* This code goes back to the earliest days of ruby-debug. It
+           tends to disallow catching an exception via the
+           "catchpoint" command. To address this one possiblilty is to
+           move this after testing for catchponts. Kent however thinks
+           there may be a misfeature in Ruby's eval.c: the problem was
+           in the fact that Ruby doesn't reset exception flag on the
+           current thread before it calls a notification handler.
 
-       See also the #ifdef'd code below as well.
-     */
+           See also the #ifdef'd code below as well.
+         */
 #ifdef NORMAL_CODE
         if( !NIL_P(rb_class_inherited_p(expn_class, rb_eSystemExit)) )
         {
@@ -1026,7 +964,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
 
         if (rdebug_catchpoints == Qnil ||
             (debug_context->stack_size == 0) ||
-            debug_context->catch_table.caught ||
+            CTX_FL_TEST(debug_context, CTX_FL_CATCHING) ||
 #ifdef _ST_NEW_
             st_get_num_entries(RHASH_TBL(rdebug_catchpoints)) == 0)
 #else
@@ -1049,12 +987,11 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
                 rb_control_frame_t *cfp = top_frame->info.runtime.cfp;
 
                 /* save the current catch table */
-                debug_context->catch_table.caught = 1;
-                debug_context->catch_table.catch_table_size = cfp->iseq->catch_table_size;
-                debug_context->catch_table.catch_table = cfp->iseq->catch_table;
+                CTX_FL_SET(debug_context, CTX_FL_CATCHING);
+                debug_context->catch_table.old_catch_table_size = cfp->iseq->catch_table_size;
+                debug_context->catch_table.old_catch_table = cfp->iseq->catch_table;
                 debug_context->catch_table.mod_name = mod_name;
                 debug_context->catch_table.errinfo = rb_errinfo();
-                top_frame->info.runtime.catch_table = &debug_context->catch_table;
 
                 /* create a new catch table to catch this exception, and put it in the current iseq */
                 cfp->iseq->catch_table_size = 1;
@@ -1064,10 +1001,10 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
             }
         }
 
-    /* If we stop the debugger, we may not be able to trace into
-       code that has an exception handler wrapped around it. So
-       the alternative is to force the user to do his own
-       Debugger.stop. */
+        /* If we stop the debugger, we may not be able to trace into
+           code that has an exception handler wrapped around it. So
+           the alternative is to force the user to do his own
+           Debugger.stop. */
 #ifdef NORMAL_CODE_MOVING_AFTER_
         if( !NIL_P(rb_class_inherited_p(expn_class, rb_eSystemExit)) )
         {

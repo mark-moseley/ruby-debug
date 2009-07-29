@@ -17,10 +17,9 @@ class TestBreakpoints < Test::Unit::TestCase
     testname='raise'
     Dir.chdir(@@SRC_DIR) do 
       script = File.join('data', testname + '.cmd')
-# FIXME: Issue #6
-#      assert_equal(true,
-#                   run_debugger(testname,
-#                                "--script #{script} -- ./raise.rb"))
+      assert_equal(true,
+                   run_debugger(testname,
+                                "--script #{script} -- ./raise.rb"))
     end
   end
 end

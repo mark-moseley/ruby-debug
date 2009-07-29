@@ -12,15 +12,16 @@ enum ctx_stop_reason {CTX_STOP_NONE, CTX_STOP_STEP, CTX_STOP_BREAKPOINT,
 #define CTX_FL_ENABLE_BKPT  (1<<7)
 #define CTX_FL_STEPPED      (1<<8)
 #define CTX_FL_FORCE_MOVE   (1<<9)
+#define CTX_FL_CATCHING     (1<<10)
 
 #define CTX_FL_TEST(c,f)  ((c)->flags & (f))
 #define CTX_FL_SET(c,f)   do { (c)->flags |= (f); } while (0)
 #define CTX_FL_UNSET(c,f) do { (c)->flags &= ~(f); } while (0)
 
 typedef struct {
-    int caught; // FIXME: context flags?
-    struct iseq_catch_table_entry *catch_table;
-    int catch_table_size;
+    struct iseq_catch_table_entry tmp_catch_table;
+    struct iseq_catch_table_entry *old_catch_table;
+    int old_catch_table_size;
     VALUE mod_name;
     VALUE errinfo;
 } debug_catch_t;
@@ -42,7 +43,6 @@ typedef struct {
 			struct rb_iseq_struct *block_iseq;
 			VALUE *block_pc;
             VALUE *last_pc;
-            debug_catch_t *catch_table;
         } runtime;
         struct {
             VALUE args;
@@ -67,16 +67,7 @@ typedef struct {
     const char * last_file;
     int last_line;
     VALUE breakpoint;
-    /* catchpoint per-thread data */
     debug_catch_t catch_table;
-    struct iseq_catch_table_entry catch_table_entry;
-#if 0
-    struct RData catch_rdata;
-    struct rb_iseq_struct catch_iseq;
-    struct iseq_insn_info_entry catch_info_entry[2];
-    struct RNode catch_cref_stack;
-    VALUE iseq_insn[2];
-#endif
 } debug_context_t;
 
 /* variables in ruby_debug.c */
