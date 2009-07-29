@@ -26,8 +26,8 @@
 
 #define STACK_SIZE_INCREMENT 128
 
-extern int rb_vm_get_sourceline(const rb_control_frame_t *cfp); /* from vm.c */
-extern VALUE rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE line, VALUE opt); /* from iseq.c */
+RUBY_EXTERN int rb_vm_get_sourceline(const rb_control_frame_t *cfp); /* from vm.c */
+RUBY_EXTERN VALUE rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE line, VALUE opt); /* from iseq.c */
 
 typedef struct {
     st_table *tbl;
@@ -1781,27 +1781,30 @@ arg_value_is_small(VALUE val)
 static void
 copy_scalar_args(debug_frame_t *debug_frame)
 {
-  /*unsigned int i;
-    ID *tbl = ruby_scope->local_tbl;
-    if (tbl && ruby_scope->local_vars) 
+    rb_control_frame_t *cfp;
+    rb_iseq_t *iseq;
+
+    cfp = debug_frame->info.runtime.cfp;
+    iseq = cfp->iseq;
+
+    if (iseq->local_table && iseq->argc)
     {
-      int n = *tbl++;
-      if (debug_frame->argc+2 < n) n = debug_frame->argc+2;
-      debug_frame->arg_ary = rb_ary_new2(n);
-      for (i=2; i<n; i++) 
-      {   
-        if (rb_is_local_id(tbl[i])) 
+        int i;
+        VALUE val;
+
+        debug_frame->arg_ary = rb_ary_new2(iseq->argc);
+        for (i = 0; i < iseq->argc; i++)
         {
-            const char *name = rb_id2name(tbl[i]);
-            VALUE val = rb_eval_string (name);
+            if (!rb_is_local_id(iseq->local_table[i])) continue; /* skip flip states */
+
+            val = *(cfp->dfp - iseq->local_size + i);
+
             if (arg_value_is_small(val))
                 rb_ary_push(debug_frame->arg_ary, val);
             else
-                rb_ary_push(debug_frame->arg_ary, 
-            rb_str_new2(rb_obj_classname(val)));
+                rb_ary_push(debug_frame->arg_ary, rb_str_new2(rb_obj_classname(val)));
         }
-      }
-  }*/
+    }
 }
 
 /*
@@ -1813,11 +1816,11 @@ copy_scalar_args(debug_frame_t *debug_frame)
 static VALUE
 context_copy_args(debug_frame_t *debug_frame)
 {
-    rb_control_frame_t *cur_frame;
+    rb_control_frame_t *cfp;
     rb_iseq_t *iseq;
 
-    cur_frame = debug_frame->info.runtime.cfp;
-    iseq = cur_frame->iseq;
+    cfp = debug_frame->info.runtime.cfp;
+    iseq = cfp->iseq;
 
     if (iseq->local_table && iseq->argc)
     {
@@ -1840,28 +1843,28 @@ static VALUE
 context_copy_locals(debug_frame_t *debug_frame, VALUE self)
 {
     int i;
-    rb_control_frame_t *cur_frame;
+    rb_control_frame_t *cfp;
     rb_iseq_t *iseq;
     VALUE hash;
 
-    cur_frame = debug_frame->info.runtime.cfp;
-    iseq = cur_frame->iseq;
+    cfp = debug_frame->info.runtime.cfp;
+    iseq = cfp->iseq;
     hash = rb_hash_new();
 
     if (iseq->local_table != NULL)
     {
         /* Note rb_iseq_disasm() is instructive in coming up with this code */
         for (i = 0; i < iseq->local_table_size; i++)
-            rb_hash_aset(hash, rb_id2str(iseq->local_table[i]), *(cur_frame->dfp - iseq->local_size + i));
+            rb_hash_aset(hash, rb_id2str(iseq->local_table[i]), *(cfp->dfp - iseq->local_size + i));
     }
 
-    iseq = cur_frame->block_iseq;
-    if ((iseq != NULL) && (iseq->local_table != NULL) && (iseq != cur_frame->iseq))
+    iseq = cfp->block_iseq;
+    if ((iseq != NULL) && (iseq->local_table != NULL) && (iseq != cfp->iseq))
     {
-        rb_control_frame_t *block_frame = RUBY_VM_NEXT_CONTROL_FRAME(cur_frame);
+        rb_control_frame_t *block_frame = RUBY_VM_NEXT_CONTROL_FRAME(cfp);
         while (block_frame > (rb_control_frame_t*)GET_THREAD()->stack)
         {
-            if (block_frame->iseq == cur_frame->block_iseq)
+            if (block_frame->iseq == cfp->block_iseq)
             {
                 for (i = 0; i < iseq->local_table_size; i++)
                     rb_hash_aset(hash, rb_id2str(iseq->local_table[i]), *(block_frame->dfp - iseq->local_table_size + i - 1));
@@ -1957,7 +1960,7 @@ context_frame_class(int argc, VALUE *argv, VALUE self)
     VALUE frame;
     debug_context_t *debug_context;
     debug_frame_t *debug_frame;
-    rb_control_frame_t *cur_frame;
+    rb_control_frame_t *cfp;
     
     debug_check_started();
     frame = optional_frame_position(argc, argv);
@@ -1965,9 +1968,9 @@ context_frame_class(int argc, VALUE *argv, VALUE self)
 
     debug_frame = GET_FRAME;
 
-    cur_frame = debug_frame->info.runtime.cfp;
+    cfp = debug_frame->info.runtime.cfp;
 
-    klass = real_class(cur_frame->iseq->klass);
+    klass = real_class(cfp->iseq->klass);
     if(TYPE(klass) == T_CLASS || TYPE(klass) == T_MODULE)
         return klass;
     return Qnil;
@@ -2305,10 +2308,7 @@ debug_add_breakpoint(int argc, VALUE *argv, VALUE self)
  *   This is a singleton class allows controlling the debugger. Use it to start/stop debugger,
  *   set/remove breakpoints, etc.
  */
-#if defined(_WIN32)
-__declspec(dllexport)
-#endif
-void
+RUBY_EXTERN void
 Init_ruby_debug()
 {
     mDebugger = rb_define_module("Debugger");
