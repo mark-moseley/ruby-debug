@@ -1,4 +1,4 @@
-#!/usr/bin/env rake
+#ruby_debug/!/usr/bin/env rake
 # -*- Ruby -*-
 require 'rubygems'
 require 'rake/gempackagetask'
@@ -11,7 +11,7 @@ Rake::ExtensionTask.new('ruby_debug')
 SO_NAME = "ruby_debug.so"
 
 # ------- Default Package ----------
-RUBY_DEBUG_VERSION = open("ext/ruby_debug.c") do |f| 
+RUBY_DEBUG_VERSION = open("ext/ruby_debug/ruby_debug.c") do |f| 
   f.grep(/^#define DEBUG_VERSION/).first[/"(.+)"/,1]
 end
 
@@ -44,10 +44,10 @@ BASE_TEST_FILE_LIST = %w(
   test/base/binding.rb 
   test/base/catchpoint.rb)
 BASE_FILES = COMMON_FILES + FileList[
-  'ext/breakpoint.c',
-  'ext/extconf.rb',
-  'ext/ruby_debug.c',
-  'ext/ruby_debug.h',
+  'ext/ruby_debug/breakpoint.c',
+  'ext/ruby_debug/extconf.rb',
+  'ext/ruby_debug/ruby_debug.c',
+  'ext/ruby_debug/ruby_debug.h',
   'ext/win32/*',
   'lib/**/*',
   BASE_TEST_FILE_LIST,
@@ -130,7 +130,7 @@ EOF
   
   # rdoc
   spec.has_rdoc = true
-  spec.extra_rdoc_files = ['README', 'ext/ruby_debug.c']
+  spec.extra_rdoc_files = ['README', 'ext/ruby_debug/ruby_debug.c']
 end
 
 cli_spec = Gem::Specification.new do |spec|
