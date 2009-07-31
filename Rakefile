@@ -4,6 +4,9 @@ require 'rubygems'
 require 'rake/gempackagetask'
 require 'rake/rdoctask'
 require 'rake/testtask'
+require 'rake/extensiontask'
+
+Rake::ExtensionTask.new('ruby_debug')
 
 SO_NAME = "ruby_debug.so"
 
