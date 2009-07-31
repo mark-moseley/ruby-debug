@@ -1,4 +1,4 @@
-#ruby_debug/!/usr/bin/env rake
+#!/usr/bin/env rake
 # -*- Ruby -*-
 require 'rubygems'
 require 'rake/gempackagetask'
