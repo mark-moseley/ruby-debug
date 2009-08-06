@@ -19,7 +19,9 @@ end
 # $CFLAGS='-fno-strict-aliasing -g -fPIC'
 
 dir_config("ruby")
-if have_header("node.h")
+if have_header("vm_core.h") and have_header("iseq.h") and have_header("insns.inc") and 
+  have_header("insns_info.inc")
+
   create_makefile("ruby_debug")
 else
   STDERR.print("Makefile creation failed\n")

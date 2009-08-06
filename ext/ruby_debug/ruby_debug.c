@@ -1,11 +1,7 @@
 #include <ruby.h>
 #include <stdio.h>
-#include <node.h>
-#include <ruby/st.h>
-#include <ruby/intern.h>
 #include <vm_core.h>
 #include <iseq.h>
-#include <eval_intern.h>
 #include <version.h>
 #include <insns.inc>
 #include <insns_info.inc>
