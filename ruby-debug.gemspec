@@ -2,10 +2,10 @@
 
 Gem::Specification.new do |s|
   s.name = %q{ruby-debug-base}
-  s.version = "0.11.8"
+  s.version = "0.11.9"
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Kent Sibilev"]
-  s.date = %q{2009-07-31}
+  s.date = %q{2009-08-15}
   s.description = %q{ruby-debug is a fast implementation of the standard Ruby debugger debug.rb.
 It is implemented by utilizing a new Ruby C API hook. The core component
 provides support that front-ends can build on. It provides breakpoint
@@ -44,6 +44,7 @@ handling, bindings for stack frames among other things.
   s.files += s.test_files
   s.extensions << "ext/ruby_debug/extconf.rb"
   s.add_dependency("columnize", ">= 0.3.1")
+  s.add_dependency("mark-moseley-ruby_core_source", ">= 0.1.1")
   s.add_dependency("mark-moseley-linecache", ">= 0.5.1")
 
   if s.respond_to? :specification_version then
