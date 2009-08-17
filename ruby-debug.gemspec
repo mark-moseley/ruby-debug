@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{ruby-debug-base}
-  s.version = "0.11.12"
+  s.version = "0.11.13"
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Kent Sibilev"]
   s.date = %q{2009-08-17}
