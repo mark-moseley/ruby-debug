@@ -1,6 +1,10 @@
 require 'ruby_debug.so'
 require 'rubygems'
-require 'linecache'
+begin
+  require 'linecache'
+  rescue LoadError
+    require 'linecache19'
+end
 
 module Debugger
   
