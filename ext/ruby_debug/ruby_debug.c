@@ -2304,7 +2304,7 @@ debug_add_breakpoint(int argc, VALUE *argv, VALUE self)
  *   This is a singleton class allows controlling the debugger. Use it to start/stop debugger,
  *   set/remove breakpoints, etc.
  */
-RUBY_EXTERN void
+void
 Init_ruby_debug()
 {
     mDebugger = rb_define_module("Debugger");
