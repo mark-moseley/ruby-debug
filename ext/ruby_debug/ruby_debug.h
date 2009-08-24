@@ -124,7 +124,7 @@ typedef struct {
 extern int   check_breakpoint_expression(VALUE breakpoint, VALUE binding);
 extern int   check_breakpoint_hit_condition(VALUE breakpoint);
 extern VALUE check_breakpoints_by_method(debug_context_t *debug_context, 
-    VALUE klass, ID mid);
+    VALUE klass, ID mid, VALUE self);
 extern VALUE check_breakpoints_by_pos(debug_context_t *debug_context, 
     char *file, int line);
 extern VALUE create_breakpoint_from_args(int argc, VALUE *argv, int id);

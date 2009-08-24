@@ -846,7 +846,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     case RUBY_EVENT_CALL:
     {
         save_call_frame(event, debug_context, self, file, line, mid);
-        breakpoint = check_breakpoints_by_method(debug_context, klass, mid);
+        breakpoint = check_breakpoints_by_method(debug_context, klass, mid, self);
         if(breakpoint != Qnil)
         {
             debug_frame_t *debug_frame;
