@@ -71,9 +71,11 @@ check_breakpoint_by_pos(VALUE breakpoint, char *file, int line)
     return 0;
 }
 
+extern VALUE g_self;
 int
 check_breakpoint_by_method(VALUE breakpoint, VALUE klass, ID mid)
 {
+    VALUE self;
     debug_breakpoint_t *debug_breakpoint;
 
     if(breakpoint == Qnil)
@@ -85,6 +87,10 @@ check_breakpoint_by_method(VALUE breakpoint, VALUE klass, ID mid)
     if(debug_breakpoint->pos.mid != mid)
         return 0;
     if(classname_cmp(debug_breakpoint->source, klass))
+        return 1;
+    self = GET_THREAD()->cfp->self;
+    if ((rb_type(self) == T_CLASS) &&
+        classname_cmp(debug_breakpoint->source, self))
         return 1;
     return 0;
 }

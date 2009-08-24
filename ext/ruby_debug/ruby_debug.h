@@ -92,9 +92,12 @@ debug_check_started()
 static inline int
 classname_cmp(VALUE name, VALUE klass)
 {
+    VALUE mod_name;
     VALUE class_name = (Qnil == name) ? rb_str_new2("main") : name;
-    return (klass != Qnil 
-	    && rb_str_cmp(class_name, rb_mod_name(klass)) == 0);
+    if (klass == Qnil) return(0);
+    mod_name = rb_mod_name(klass);
+    return (mod_name != Qnil 
+	    && rb_str_cmp(class_name, mod_name) == 0);
 }
 
 /* Breakpoint information */
