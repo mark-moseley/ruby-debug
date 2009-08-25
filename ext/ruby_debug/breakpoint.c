@@ -71,7 +71,6 @@ check_breakpoint_by_pos(VALUE breakpoint, char *file, int line)
     return 0;
 }
 
-extern VALUE g_self;
 int
 check_breakpoint_by_method(VALUE breakpoint, VALUE klass, ID mid, VALUE self)
 {
