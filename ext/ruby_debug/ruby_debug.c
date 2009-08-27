@@ -784,7 +784,12 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         else
             set_frame_source(event, debug_context, self, file, line, mid);
 
-        if (CTX_FL_TEST(debug_context, CTX_FL_CATCHING))
+        if (CTX_FL_TEST(debug_context, CTX_FL_JUMPING))
+        {
+            CTX_FL_UNSET(debug_context, CTX_FL_JUMPING);
+            break;
+        }
+        else if (CTX_FL_TEST(debug_context, CTX_FL_CATCHING))
         {
             debug_frame_t *top_frame = get_top_frame(debug_context);
             
@@ -2217,6 +2222,44 @@ context_stop_reason(VALUE self)
     return ID2SYM(rb_intern(sym_name));
 }
 
+/*
+ *   call-seq:
+ *      context.jump(line, frame) -> bool
+ *
+ *   Returns +true+ if jump to line in frame was successful.
+ */
+static VALUE
+context_jump(int argc, VALUE *argv, VALUE self)
+{
+    debug_context_t *debug_context;
+    debug_frame_t *debug_frame;
+    VALUE line, level;
+    int i;
+    struct rb_iseq_struct *iseq;
+
+    Data_Get_Struct(self, debug_context_t, debug_context);
+    debug_frame = get_top_frame(debug_context);
+
+    if (argc <= 0)
+        rb_raise(rb_eArgError, "wrong number of arguments (%d for 1 or 2)", argc);
+    rb_scan_args(argc, argv, "11", &line, &level);
+
+    line = FIX2INT(line);
+    iseq = debug_frame->info.runtime.cfp->iseq;
+    for (i = 0; i < iseq->insn_info_size; i++)
+    {
+        if (iseq->insn_info_table[i].line_no == line)
+        {
+            if (*debug_frame->info.runtime.cfp->pc == BIN(pop))
+                debug_frame->info.runtime.cfp->sp--;
+            debug_frame->info.runtime.cfp->pc = 
+                iseq->iseq_encoded + iseq->insn_info_table[i].position;
+            CTX_FL_SET(debug_context, CTX_FL_JUMPING);
+            return Qtrue;
+        }
+    }
+    return Qfalse;
+}
 
 /*
  *   Document-class: Context
@@ -2258,6 +2301,7 @@ Init_context()
              context_breakpoint, 0);      /* in breakpoint.c */
     rb_define_method(cContext, "set_breakpoint", 
              context_set_breakpoint, -1); /* in breakpoint.c */
+    rb_define_method(cContext, "jump", context_jump, -1);
 }
 
 /*
