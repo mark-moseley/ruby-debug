@@ -2224,27 +2224,33 @@ context_stop_reason(VALUE self)
 
 /*
  *   call-seq:
- *      context.jump(line, frame) -> bool
+ *      context.jump_file(line, file) -> bool
  *
- *   Returns +true+ if jump to line in frame was successful.
+ *   Returns +true+ if jump to +line+ in filename +file+ was successful.
  */
 static VALUE
 context_jump(int argc, VALUE *argv, VALUE self)
 {
     debug_context_t *debug_context;
     debug_frame_t *debug_frame;
-    VALUE line, level;
+    VALUE line, file;
+    const char *file_str;
     int i;
     struct rb_iseq_struct *iseq;
 
     Data_Get_Struct(self, debug_context_t, debug_context);
     debug_frame = get_top_frame(debug_context);
 
-    if (argc <= 0)
+    if ((argc <= 0) || (argc > 2))
         rb_raise(rb_eArgError, "wrong number of arguments (%d for 1 or 2)", argc);
-    rb_scan_args(argc, argv, "11", &line, &level);
+    rb_scan_args(argc, argv, "11", &line, &file);
 
     line = FIX2INT(line);
+    if (file == Qnil)
+        file_str = debug_frame->file;
+    else
+        file_str = RSTRING_PTR(file);
+
     iseq = debug_frame->info.runtime.cfp->iseq;
     for (i = 0; i < iseq->insn_info_size; i++)
     {
