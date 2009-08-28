@@ -16,7 +16,7 @@
 #define min(x,y) ((x) < (y) ? (x) : (y))
 #endif
 
-#if RUBY_VERSION_MAJOR == 1 && RUBY_VERSION_MINOR == 9 && RUBY_VERSION_TEENY == 1 && RUBY_PATCHLEVEL > 0
+#if RUBY_VERSION_MAJOR == 1 && RUBY_VERSION_MINOR == 9 && RUBY_VERSION_TEENY == 1 && RUBY_PATCHLEVEL >= 0
 #define RUBY_VERSION_1_9_1
 #endif
 
