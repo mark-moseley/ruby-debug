@@ -383,7 +383,6 @@ debug_context_create(VALUE thread)
     debug_context->stack_size = 0;
     debug_context->thread_id = ref2id(thread);
     debug_context->breakpoint = Qnil;
-    debug_context->stack = GET_THREAD()->stack;
     if(rb_obj_class(thread) == cDebugThread)
         CTX_FL_SET(debug_context, CTX_FL_IGNORE);
     return Data_Wrap_Struct(cContext, debug_context_mark, debug_context_free, debug_context);
@@ -1882,8 +1881,10 @@ context_copy_locals(debug_context_t *debug_context, debug_frame_t *debug_frame, 
     iseq = cfp->block_iseq;
     if ((iseq != NULL) && (iseq->local_table != NULL) && (iseq != cfp->iseq))
     {
+        rb_thread_t *th;
         rb_control_frame_t *block_frame = RUBY_VM_NEXT_CONTROL_FRAME(cfp);
-        while (block_frame > (rb_control_frame_t*)debug_context->stack)
+        Data_Get_Struct(context_thread_0(debug_context), rb_thread_t, th);
+        while (block_frame > (rb_control_frame_t*)th->stack)
         {
             if (block_frame->iseq == cfp->block_iseq)
             {
