@@ -694,9 +694,6 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     rb_thread_t *thread = GET_THREAD();
     struct rb_iseq_struct *iseq = thread->cfp->iseq;
 
-    rb_remove_event_hook(debug_event_hook);
-    rb_add_event_hook(debug_event_hook, RUBY_EVENT_ALL, Qnil);
-
     hook_count++;
 
     if ((iseq == NULL) && (event != RUBY_EVENT_RAISE))
