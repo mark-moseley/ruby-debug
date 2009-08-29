@@ -69,6 +69,7 @@ typedef struct {
     int last_line;
     VALUE breakpoint;
     debug_catch_t catch_table;
+    VALUE *stack;
 } debug_context_t;
 
 /* variables in ruby_debug.c */
