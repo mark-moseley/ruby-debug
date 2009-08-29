@@ -71,6 +71,7 @@ static VALUE context_copy_locals(debug_context_t *,debug_frame_t *, VALUE);
 static void context_suspend_0(debug_context_t *);
 static void context_resume_0(debug_context_t *);
 static void copy_scalar_args(debug_frame_t *);
+static void debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE klass);
 
 typedef struct locked_thread_t {
     VALUE thread_id;
@@ -677,6 +678,17 @@ create_catch_table(debug_context_t *debug_context, unsigned long cont)
     return(catch_table);
 }
 
+static int
+set_thread_event_flag_i(st_data_t key, st_data_t val, st_data_t flag)
+{
+    VALUE thval = key;
+    rb_thread_t *th;
+    GetThreadPtr(thval, th);
+    th->event_flags |= RUBY_EVENT_VM;
+
+    return(ST_CONTINUE);
+}
+
 static void
 debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE klass)
 {
@@ -744,6 +756,9 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
 
     /* only the current thread can proceed */
     locker = thread->self;
+
+    /* make sure all threads have event flag set so we'll get its events */
+    st_foreach(GET_VM()->living_threads, set_thread_event_flag_i, 0);
 
     /* remove any frames that are now out of scope */
     while(debug_context->stack_size > 0)
