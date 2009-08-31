@@ -2,10 +2,10 @@
 
 Gem::Specification.new do |s|
   s.name = %q{ruby-debug-base19}
-  s.version = "0.11.17"
+  s.version = "0.11.18"
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Kent Sibilev", "Mark Moseley"]
-  s.date = %q{2009-08-28}
+  s.date = %q{2009-08-30}
   s.description = %q{ruby-debug is a fast implementation of the standard Ruby debugger debug.rb.
 It is implemented by utilizing a new Ruby C API hook. The core component
 provides support that front-ends can build on. It provides breakpoint

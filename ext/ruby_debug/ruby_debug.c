@@ -757,7 +757,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     locker = thread->self;
 
     /* make sure all threads have event flag set so we'll get its events */
-    st_foreach(GET_VM()->living_threads, set_thread_event_flag_i, 0);
+    st_foreach(thread->vm->living_threads, set_thread_event_flag_i, 0);
 
     /* remove any frames that are now out of scope */
     while(debug_context->stack_size > 0)
