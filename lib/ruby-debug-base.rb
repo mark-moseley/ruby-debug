@@ -90,7 +90,7 @@ module Debugger
     end
     
     def source_reload
-      LineCache::clear_file_cache(true)
+      LineCache::clear_file_cache
     end
     
     # Get line +line_number+ from file named +filename+. Return "\n"
