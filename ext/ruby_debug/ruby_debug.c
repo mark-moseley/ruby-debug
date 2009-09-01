@@ -43,6 +43,7 @@ static debug_context_t *last_debug_context = NULL;
 VALUE rdebug_threads_tbl = Qnil; /* Context for each of the threads */
 VALUE mDebugger;                 /* Ruby Debugger Module object */
 
+static VALUE opt_call_c_function;
 static VALUE cThreadsTable;
 static VALUE cContext;
 static VALUE cDebugThread;
@@ -71,7 +72,6 @@ static VALUE context_copy_locals(debug_context_t *,debug_frame_t *, VALUE);
 static void context_suspend_0(debug_context_t *);
 static void context_resume_0(debug_context_t *);
 static void copy_scalar_args(debug_frame_t *);
-static void debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE klass);
 
 typedef struct locked_thread_t {
     VALUE thread_id;
@@ -2243,6 +2243,25 @@ context_stop_reason(VALUE self)
     return ID2SYM(rb_intern(sym_name));
 }
 
+static rb_control_frame_t *
+FUNC_FASTCALL(do_jump)(rb_thread_t *th, rb_control_frame_t *cfp)
+{
+    VALUE context;
+    debug_context_t *debug_context;
+    debug_frame_t *debug_frame;
+
+    thread_context_lookup(th->self, &context, &debug_context);
+    debug_frame = get_top_frame(debug_context);
+
+    cfp->pc[-2] = debug_frame->info.runtime.saved_jump_ins[0];
+    cfp->pc[-1] = debug_frame->info.runtime.saved_jump_ins[1];
+    cfp->pc = debug_frame->info.runtime.jump_pc;
+    if (cfp->pc[-2] == BIN(pop))
+        cfp->sp--;
+    CTX_FL_SET(debug_context, CTX_FL_JUMPING);
+    return(cfp);
+}
+
 /*
  *   call-seq:
  *      context.jump(line, file) -> bool
@@ -2259,8 +2278,13 @@ context_jump(int argc, VALUE *argv, VALUE self)
     int i;
     struct rb_iseq_struct *iseq;
 
+    debug_check_started();
+
     Data_Get_Struct(self, debug_context_t, debug_context);
     debug_frame = get_top_frame(debug_context);
+
+    if (debug_frame == NULL)
+        rb_raise(rb_eRuntimeError, "No frames collected.");
 
     if ((argc <= 0) || (argc > 2))
         rb_raise(rb_eArgError, "wrong number of arguments (%d for 1 or 2)", argc);
@@ -2277,11 +2301,11 @@ context_jump(int argc, VALUE *argv, VALUE self)
     {
         if (iseq->insn_info_table[i].line_no == line)
         {
-            if (*debug_frame->info.runtime.cfp->pc == BIN(pop))
-                debug_frame->info.runtime.cfp->sp--;
-            debug_frame->info.runtime.cfp->pc = 
-                iseq->iseq_encoded + iseq->insn_info_table[i].position;
-            CTX_FL_SET(debug_context, CTX_FL_JUMPING);
+            debug_frame->info.runtime.saved_jump_ins[0] = debug_frame->info.runtime.cfp->pc[0];
+            debug_frame->info.runtime.saved_jump_ins[1] = debug_frame->info.runtime.cfp->pc[1];
+            debug_frame->info.runtime.cfp->pc[0] = opt_call_c_function;
+            debug_frame->info.runtime.cfp->pc[1] = (VALUE)do_jump;
+            debug_frame->info.runtime.jump_pc = iseq->iseq_encoded + iseq->insn_info_table[i].position;
             return Qtrue;
         }
     }
@@ -2378,6 +2402,19 @@ debug_add_breakpoint(int argc, VALUE *argv, VALUE self)
 void
 Init_ruby_debug()
 {
+    rb_iseq_t iseq;
+    iseq.iseq = &opt_call_c_function;
+    iseq.iseq_size = 1;
+    iseq.iseq_encoded = NULL;
+
+    opt_call_c_function = (VALUE)BIN(opt_call_c_function);
+    rb_iseq_translate_threaded_code(&iseq);
+    if (iseq.iseq_encoded != iseq.iseq)
+    {
+        opt_call_c_function = iseq.iseq_encoded[0];
+        xfree(iseq.iseq_encoded);
+    }
+
     mDebugger = rb_define_module("Debugger");
     rb_define_const(mDebugger, "VERSION", rb_str_new2(DEBUG_VERSION));
     rb_define_module_function(mDebugger, "start_", debug_start, 0);

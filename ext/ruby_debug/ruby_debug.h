@@ -44,6 +44,8 @@ typedef struct {
 			struct rb_iseq_struct *block_iseq;
 			VALUE *block_pc;
             VALUE *last_pc;
+            VALUE saved_jump_ins[2];
+            VALUE *jump_pc;
         } runtime;
         struct {
             VALUE args;
