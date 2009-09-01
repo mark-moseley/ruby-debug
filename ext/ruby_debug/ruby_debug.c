@@ -1,5 +1,6 @@
 #include <ruby.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <vm_core.h>
 #include <iseq.h>
 #include <version.h>
@@ -418,7 +419,7 @@ debug_context_dup(debug_context_t *debug_context, VALUE self)
 }
 
 static void
-thread_context_lookup(VALUE thread, VALUE *context, debug_context_t **debug_context)
+thread_context_lookup(VALUE thread, VALUE *context, debug_context_t **debug_context, int create)
 {
     threads_table_t *threads_table;
     VALUE thread_id;
@@ -437,8 +438,18 @@ thread_context_lookup(VALUE thread, VALUE *context, debug_context_t **debug_cont
     Data_Get_Struct(rdebug_threads_tbl, threads_table_t, threads_table);
     if(!st_lookup(threads_table->tbl, thread_id, context))
     {
-        *context = debug_context_create(thread);
-        st_insert(threads_table->tbl, thread_id, *context);
+        if (create)
+        {
+            *context = debug_context_create(thread);
+            st_insert(threads_table->tbl, thread_id, *context);
+        }
+        else
+        {
+            *context = 0;
+            if (debug_context)
+                *debug_context = NULL;
+            return;
+        }
     }
 
     Data_Get_Struct(*context, debug_context_t, l_debug_context);
@@ -709,7 +720,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
 
     if ((iseq == NULL) && (event != RUBY_EVENT_RAISE))
         return;
-    thread_context_lookup(thread->self, &context, &debug_context);
+    thread_context_lookup(thread->self, &context, &debug_context, 1);
 
     if ((event == RUBY_EVENT_LINE) || (event == RUBY_EVENT_CALL))
     {
@@ -1195,7 +1206,7 @@ debug_current_context(VALUE self)
     debug_check_started();
 
     thread = rb_thread_current();
-    thread_context_lookup(thread, &context, NULL);
+    thread_context_lookup(thread, &context, NULL, 1);
 
     return context;
 }
@@ -1212,7 +1223,7 @@ debug_thread_context(VALUE self, VALUE thread)
     VALUE context;
 
     debug_check_started();
-    thread_context_lookup(thread, &context, NULL);
+    thread_context_lookup(thread, &context, NULL, 1);
     return context;
 }
 
@@ -1239,7 +1250,7 @@ debug_contexts(VALUE self)
     for(i = 0; i < RARRAY_LEN(list); i++)
     {
         thread = rb_ary_entry(list, i);
-        thread_context_lookup(thread, &context, NULL);
+        thread_context_lookup(thread, &context, NULL, 1);
         rb_ary_push(new_list, context);
     }
     threads_table_clear(rdebug_threads_tbl);
@@ -1271,7 +1282,7 @@ debug_suspend(VALUE self)
     debug_check_started();
 
     context_list = debug_contexts(self);
-    thread_context_lookup(rb_thread_current(), &current, NULL);
+    thread_context_lookup(rb_thread_current(), &current, NULL, 1);
 
     for(i = 0; i < RARRAY_LEN(context_list); i++)
     {
@@ -1303,7 +1314,7 @@ debug_resume(VALUE self)
 
     context_list = debug_contexts(self);
 
-    thread_context_lookup(rb_thread_current(), &current, NULL);
+    thread_context_lookup(rb_thread_current(), &current, NULL, 1);
     for(i = 0; i < RARRAY_LEN(context_list); i++)
     {
         context = rb_ary_entry(context_list, i);
@@ -1883,7 +1894,7 @@ context_copy_locals(debug_context_t *debug_context, debug_frame_t *debug_frame, 
     {
         rb_thread_t *th;
         rb_control_frame_t *block_frame = RUBY_VM_NEXT_CONTROL_FRAME(cfp);
-        Data_Get_Struct(context_thread_0(debug_context), rb_thread_t, th);
+        GetThreadPtr(context_thread_0(debug_context), th);
         while (block_frame > (rb_control_frame_t*)th->stack)
         {
             if (block_frame->iseq == cfp->block_iseq)
@@ -2250,8 +2261,12 @@ FUNC_FASTCALL(do_jump)(rb_thread_t *th, rb_control_frame_t *cfp)
     debug_context_t *debug_context;
     debug_frame_t *debug_frame;
 
-    thread_context_lookup(th->self, &context, &debug_context);
+    thread_context_lookup(th->self, &context, &debug_context, 0);
+    if (debug_context == NULL)
+        rb_raise(rb_eRuntimeError, "Lost context in jump");
     debug_frame = get_top_frame(debug_context);
+    if (debug_frame == NULL)
+        rb_raise(rb_eRuntimeError, "Lost context frame in jump");
 
     cfp->pc[-2] = debug_frame->info.runtime.saved_jump_ins[0];
     cfp->pc[-1] = debug_frame->info.runtime.saved_jump_ins[1];
@@ -2297,17 +2312,18 @@ context_jump(int argc, VALUE *argv, VALUE self)
         file_str = RSTRING_PTR(file);
 
     iseq = debug_frame->info.runtime.cfp->iseq;
+    if ((debug_frame->info.runtime.cfp->pc - iseq->iseq_encoded) >= (iseq->iseq_size - 1))
+        return Qfalse;
     for (i = 0; i < iseq->insn_info_size; i++)
     {
-        if (iseq->insn_info_table[i].line_no == line)
-        {
-            debug_frame->info.runtime.saved_jump_ins[0] = debug_frame->info.runtime.cfp->pc[0];
-            debug_frame->info.runtime.saved_jump_ins[1] = debug_frame->info.runtime.cfp->pc[1];
-            debug_frame->info.runtime.cfp->pc[0] = opt_call_c_function;
-            debug_frame->info.runtime.cfp->pc[1] = (VALUE)do_jump;
-            debug_frame->info.runtime.jump_pc = iseq->iseq_encoded + iseq->insn_info_table[i].position;
-            return Qtrue;
-        }
+        if (iseq->insn_info_table[i].line_no != line)
+            continue;
+        debug_frame->info.runtime.saved_jump_ins[0] = debug_frame->info.runtime.cfp->pc[0];
+        debug_frame->info.runtime.saved_jump_ins[1] = debug_frame->info.runtime.cfp->pc[1];
+        debug_frame->info.runtime.cfp->pc[0] = opt_call_c_function;
+        debug_frame->info.runtime.cfp->pc[1] = (VALUE)do_jump;
+        debug_frame->info.runtime.jump_pc = iseq->iseq_encoded + iseq->insn_info_table[i].position;
+        return Qtrue;
     }
     return Qfalse;
 }
