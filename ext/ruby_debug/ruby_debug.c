@@ -384,6 +384,7 @@ debug_context_create(VALUE thread)
     debug_context->stack_size = 0;
     debug_context->thread_id = ref2id(thread);
     debug_context->breakpoint = Qnil;
+    debug_context->jump_pc = NULL;
     if(rb_obj_class(thread) == cDebugThread)
         CTX_FL_SET(debug_context, CTX_FL_IGNORE);
     return Data_Wrap_Struct(cContext, debug_context_mark, debug_context_free, debug_context);
@@ -2259,18 +2260,17 @@ FUNC_FASTCALL(do_jump)(rb_thread_t *th, rb_control_frame_t *cfp)
 {
     VALUE context;
     debug_context_t *debug_context;
-    debug_frame_t *debug_frame;
 
     thread_context_lookup(th->self, &context, &debug_context, 0);
     if (debug_context == NULL)
         rb_raise(rb_eRuntimeError, "Lost context in jump");
-    debug_frame = get_top_frame(debug_context);
-    if (debug_frame == NULL)
-        rb_raise(rb_eRuntimeError, "Lost context frame in jump");
+    if ((debug_context->jump_pc < cfp->iseq->iseq_encoded) || (debug_context->jump_pc >= cfp->iseq->iseq_encoded + cfp->iseq->iseq_size))
+        rb_raise(rb_eRuntimeError, "Invalid jump PC target");
 
-    cfp->pc[-2] = debug_frame->info.runtime.saved_jump_ins[0];
-    cfp->pc[-1] = debug_frame->info.runtime.saved_jump_ins[1];
-    cfp->pc = debug_frame->info.runtime.jump_pc;
+    cfp->pc[-2] = debug_context->saved_jump_ins[0];
+    cfp->pc[-1] = debug_context->saved_jump_ins[1];
+    cfp->pc = debug_context->jump_pc;
+    debug_context->jump_pc = NULL;
     if (cfp->pc[-2] == BIN(pop))
         cfp->sp--;
     CTX_FL_SET(debug_context, CTX_FL_JUMPING);
@@ -2297,9 +2297,19 @@ context_jump(int argc, VALUE *argv, VALUE self)
 
     Data_Get_Struct(self, debug_context_t, debug_context);
     debug_frame = get_top_frame(debug_context);
-
     if (debug_frame == NULL)
         rb_raise(rb_eRuntimeError, "No frames collected.");
+
+    if (debug_context->jump_pc != NULL)
+    {
+        if ((debug_frame->info.runtime.cfp->pc[0] == opt_call_c_function) &&
+            (debug_frame->info.runtime.cfp->pc[1] == (VALUE)do_jump))
+        {
+            debug_frame->info.runtime.cfp->pc[0] = debug_context->saved_jump_ins[0];
+            debug_frame->info.runtime.cfp->pc[1] = debug_context->saved_jump_ins[1];
+        }
+        debug_context->jump_pc = NULL;
+    }
 
     if ((argc <= 0) || (argc > 2))
         rb_raise(rb_eArgError, "wrong number of arguments (%d for 1 or 2)", argc);
@@ -2318,15 +2328,16 @@ context_jump(int argc, VALUE *argv, VALUE self)
     {
         if (iseq->insn_info_table[i].line_no != line)
             continue;
-        debug_frame->info.runtime.saved_jump_ins[0] = debug_frame->info.runtime.cfp->pc[0];
-        debug_frame->info.runtime.saved_jump_ins[1] = debug_frame->info.runtime.cfp->pc[1];
+        debug_context->saved_jump_ins[0] = debug_frame->info.runtime.cfp->pc[0];
+        debug_context->saved_jump_ins[1] = debug_frame->info.runtime.cfp->pc[1];
         debug_frame->info.runtime.cfp->pc[0] = opt_call_c_function;
         debug_frame->info.runtime.cfp->pc[1] = (VALUE)do_jump;
-        debug_frame->info.runtime.jump_pc = iseq->iseq_encoded + iseq->insn_info_table[i].position;
+        debug_context->jump_pc = iseq->iseq_encoded + iseq->insn_info_table[i].position;
         return Qtrue;
     }
     return Qfalse;
 }
+
 
 /*
  *   Document-class: Context
