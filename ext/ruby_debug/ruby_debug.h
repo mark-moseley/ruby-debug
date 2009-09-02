@@ -13,7 +13,6 @@ enum ctx_stop_reason {CTX_STOP_NONE, CTX_STOP_STEP, CTX_STOP_BREAKPOINT,
 #define CTX_FL_STEPPED      (1<<8)
 #define CTX_FL_FORCE_MOVE   (1<<9)
 #define CTX_FL_CATCHING     (1<<10)
-#define CTX_FL_JUMPING      (1<<11)
 
 #define CTX_FL_TEST(c,f)  ((c)->flags & (f))
 #define CTX_FL_SET(c,f)   do { (c)->flags |= (f); } while (0)
@@ -70,6 +69,7 @@ typedef struct {
     VALUE breakpoint;
     debug_catch_t catch_table;
     VALUE saved_jump_ins[2];
+    rb_control_frame_t *jump_cfp;
     VALUE *jump_pc;
 } debug_context_t;
 

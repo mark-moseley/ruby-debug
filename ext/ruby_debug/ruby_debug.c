@@ -385,6 +385,7 @@ debug_context_create(VALUE thread)
     debug_context->thread_id = ref2id(thread);
     debug_context->breakpoint = Qnil;
     debug_context->jump_pc = NULL;
+    debug_context->jump_cfp = NULL;
     if(rb_obj_class(thread) == cDebugThread)
         CTX_FL_SET(debug_context, CTX_FL_IGNORE);
     return Data_Wrap_Struct(cContext, debug_context_mark, debug_context_free, debug_context);
@@ -815,12 +816,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         else
             set_frame_source(event, debug_context, self, file, line, mid);
 
-        if (CTX_FL_TEST(debug_context, CTX_FL_JUMPING))
-        {
-            CTX_FL_UNSET(debug_context, CTX_FL_JUMPING);
-            break;
-        }
-        else if (CTX_FL_TEST(debug_context, CTX_FL_CATCHING))
+        if (CTX_FL_TEST(debug_context, CTX_FL_CATCHING))
         {
             debug_frame_t *top_frame = get_top_frame(debug_context);
             
@@ -1452,7 +1448,7 @@ debug_set_debug(VALUE self, VALUE value)
 static VALUE
 debug_thread_inherited(VALUE klass)
 {
-  rb_raise(rb_eRuntimeError, "Can't inherit Debugger::DebugThread class");
+    rb_raise(rb_eRuntimeError, "Can't inherit Debugger::DebugThread class");
 }
 
 /*
@@ -1767,12 +1763,32 @@ context_frame_line(int argc, VALUE *argv, VALUE self)
 {
     VALUE frame;
     debug_context_t *debug_context;
+    debug_frame_t *debug_frame;
+    rb_control_frame_t *cfp;
+    rb_control_frame_t *cfp_end;
+    rb_thread_t *th;
+    VALUE *pc;
 
     debug_check_started();
     frame = optional_frame_position(argc, argv);
     Data_Get_Struct(self, debug_context_t, debug_context);
+    GetThreadPtr(context_thread_0(debug_context), th);
 
-    return(INT2FIX(rb_vm_get_sourceline(GET_FRAME->info.runtime.cfp)));
+    debug_frame = get_top_frame(debug_context);
+    if (debug_frame == NULL)
+        return(INT2FIX(0));
+
+    pc = GET_FRAME->info.runtime.last_pc;
+    cfp_end = RUBY_VM_END_CONTROL_FRAME(th);
+    cfp = th->cfp;
+    while (RUBY_VM_VALID_CONTROL_FRAME_P(cfp, cfp_end))
+    {
+        if ((cfp->iseq != NULL) && (pc >= cfp->iseq->iseq_encoded) && (pc < cfp->iseq->iseq_encoded + cfp->iseq->iseq_size))
+            return(INT2FIX(rb_vm_get_sourceline(cfp)));
+        cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
+    }
+
+    return(INT2FIX(0));
 }
 
 /*
@@ -2264,16 +2280,20 @@ FUNC_FASTCALL(do_jump)(rb_thread_t *th, rb_control_frame_t *cfp)
     thread_context_lookup(th->self, &context, &debug_context, 0);
     if (debug_context == NULL)
         rb_raise(rb_eRuntimeError, "Lost context in jump");
-    if ((debug_context->jump_pc < cfp->iseq->iseq_encoded) || (debug_context->jump_pc >= cfp->iseq->iseq_encoded + cfp->iseq->iseq_size))
-        rb_raise(rb_eRuntimeError, "Invalid jump PC target");
-
     cfp->pc[-2] = debug_context->saved_jump_ins[0];
     cfp->pc[-1] = debug_context->saved_jump_ins[1];
+
+    cfp = debug_context->jump_cfp;
+    if ((debug_context->jump_pc < cfp->iseq->iseq_encoded) || (debug_context->jump_pc >= cfp->iseq->iseq_encoded + cfp->iseq->iseq_size))
+        rb_raise(rb_eRuntimeError, "Invalid jump PC target");
     cfp->pc = debug_context->jump_pc;
+
     debug_context->jump_pc = NULL;
-    if (cfp->pc[-2] == BIN(pop))
-        cfp->sp--;
-    CTX_FL_SET(debug_context, CTX_FL_JUMPING);
+    debug_context->jump_cfp = NULL;
+    debug_context->last_line = 0;
+    debug_context->last_file = NULL;
+    debug_context->stop_next = 1;
+    th->cfp = cfp;
     return(cfp);
 }
 
@@ -2289,53 +2309,71 @@ context_jump(int argc, VALUE *argv, VALUE self)
     debug_context_t *debug_context;
     debug_frame_t *debug_frame;
     VALUE line, file;
-    const char *file_str;
     int i;
-    struct rb_iseq_struct *iseq;
+    rb_thread_t *th;
+    rb_control_frame_t *cfp;
+    rb_control_frame_t *cfp_end;
+    rb_control_frame_t *cfp_start = NULL;
 
     debug_check_started();
 
     Data_Get_Struct(self, debug_context_t, debug_context);
+    GetThreadPtr(context_thread_0(debug_context), th);
     debug_frame = get_top_frame(debug_context);
     if (debug_frame == NULL)
         rb_raise(rb_eRuntimeError, "No frames collected.");
 
-    if (debug_context->jump_pc != NULL)
-    {
-        if ((debug_frame->info.runtime.cfp->pc[0] == opt_call_c_function) &&
-            (debug_frame->info.runtime.cfp->pc[1] == (VALUE)do_jump))
-        {
-            debug_frame->info.runtime.cfp->pc[0] = debug_context->saved_jump_ins[0];
-            debug_frame->info.runtime.cfp->pc[1] = debug_context->saved_jump_ins[1];
-        }
-        debug_context->jump_pc = NULL;
-    }
-
-    if ((argc <= 0) || (argc > 2))
-        rb_raise(rb_eArgError, "wrong number of arguments (%d for 1 or 2)", argc);
-    rb_scan_args(argc, argv, "11", &line, &file);
+    if (argc != 2)
+        rb_raise(rb_eArgError, "wrong number of arguments (%d for 2)", argc);
+    rb_scan_args(argc, argv, "2", &line, &file);
 
     line = FIX2INT(line);
-    if (file == Qnil)
-        file_str = debug_frame->file;
-    else
-        file_str = RSTRING_PTR(file);
 
-    iseq = debug_frame->info.runtime.cfp->iseq;
-    if ((debug_frame->info.runtime.cfp->pc - iseq->iseq_encoded) >= (iseq->iseq_size - 1))
-        return Qfalse;
-    for (i = 0; i < iseq->insn_info_size; i++)
+    /* find topmost frame of the debugged code */
+    cfp = th->cfp;
+    cfp_end = RUBY_VM_END_CONTROL_FRAME(th);
+    while (RUBY_VM_VALID_CONTROL_FRAME_P(cfp, cfp_end))
     {
-        if (iseq->insn_info_table[i].line_no != line)
-            continue;
-        debug_context->saved_jump_ins[0] = debug_frame->info.runtime.cfp->pc[0];
-        debug_context->saved_jump_ins[1] = debug_frame->info.runtime.cfp->pc[1];
-        debug_frame->info.runtime.cfp->pc[0] = opt_call_c_function;
-        debug_frame->info.runtime.cfp->pc[1] = (VALUE)do_jump;
-        debug_context->jump_pc = iseq->iseq_encoded + iseq->insn_info_table[i].position;
-        return Qtrue;
+        if (cfp->pc == debug_frame->info.runtime.last_pc)
+        {
+            cfp_start = cfp;
+            if ((cfp->pc - cfp->iseq->iseq_encoded) >= (cfp->iseq->iseq_size - 1))
+                return(INT2FIX(1)); /* no space for opt_call_c_function hijack */
+            break;
+        }
+        cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
     }
-    return Qfalse;
+    if (cfp_start == NULL)
+        return(INT2FIX(2)); /* couldn't find frame; should never happen */
+
+    /* find target frame to jump to */
+    while (RUBY_VM_VALID_CONTROL_FRAME_P(cfp, cfp_end))
+    {
+        if ((cfp->iseq != NULL) && (rb_str_cmp(file, cfp->iseq->filename) == 0))
+        {
+            for (i = 0; i < cfp->iseq->insn_info_size; i++)
+            {
+                if (cfp->iseq->insn_info_table[i].line_no != line)
+                    continue;
+
+                /* hijack the currently running code so that we can change the frame PC(s) */
+                debug_context->saved_jump_ins[0] = cfp_start->pc[0];
+                debug_context->saved_jump_ins[1] = cfp_start->pc[1];
+                cfp_start->pc[0] = opt_call_c_function;
+                cfp_start->pc[1] = (VALUE)do_jump;
+
+                debug_context->jump_cfp = cfp;
+                debug_context->jump_pc =
+                    cfp->iseq->iseq_encoded + cfp->iseq->insn_info_table[i].position;
+
+                return(INT2FIX(0)); /* success */
+            }
+        }
+
+        cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
+    }
+
+    return(INT2FIX(3)); /* couldn't find a line and file frame match */
 }
 
 
