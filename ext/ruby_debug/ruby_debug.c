@@ -1780,12 +1780,12 @@ context_frame_line(int argc, VALUE *argv, VALUE self)
 
     pc = GET_FRAME->info.runtime.last_pc;
     cfp_end = RUBY_VM_END_CONTROL_FRAME(th);
-    cfp = th->cfp;
-    while (RUBY_VM_VALID_CONTROL_FRAME_P(cfp, cfp_end))
+    cfp = GET_FRAME->info.runtime.cfp;
+    while (cfp > (rb_control_frame_t*)th->stack)
     {
         if ((cfp->iseq != NULL) && (pc >= cfp->iseq->iseq_encoded) && (pc < cfp->iseq->iseq_encoded + cfp->iseq->iseq_size))
             return(INT2FIX(rb_vm_get_sourceline(cfp)));
-        cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
+        cfp = RUBY_VM_NEXT_CONTROL_FRAME(cfp);
     }
 
     return(INT2FIX(0));
