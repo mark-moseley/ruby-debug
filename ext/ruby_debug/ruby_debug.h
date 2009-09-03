@@ -27,6 +27,12 @@ typedef struct {
 } debug_catch_t;
 
 typedef struct {
+    struct rb_iseq_struct *iseq;
+    struct iseq_catch_table_entry *catch_table;
+    int catch_table_size;
+} iseq_catch_t;
+
+typedef struct {
     int argc;         /* Number of arguments a frame should have. */
     VALUE binding;
     ID id;
@@ -71,6 +77,7 @@ typedef struct {
     VALUE saved_jump_ins[2];
     rb_control_frame_t *jump_cfp;
     VALUE *jump_pc;
+    iseq_catch_t *old_iseq_catch;
 } debug_context_t;
 
 /* variables in ruby_debug.c */

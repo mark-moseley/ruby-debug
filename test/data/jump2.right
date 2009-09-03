@@ -1,0 +1,44 @@
+jump2.rb:1
+def foo3(arg)
+# # ********************************************************
+# # This tests jump command
+# # ********************************************************
+# set debuggertesting on
+Currently testing the debugger is on.
+# set callstyle last
+Frame call-display style is last.
+# set force off
+force-stepping is off.
+# step
+jump2.rb:9
+def foo2(arg)
+# step
+jump2.rb:17
+def foo1(arg)
+# step
+jump2.rb:25
+foo1(0)
+# step
+jump2.rb:18
+arg = arg + 1
+# step
+jump2.rb:19
+foo2(arg)
+# step
+jump2.rb:10
+arg = arg + 2
+# step
+jump2.rb:11
+foo3(arg)
+# step
+jump2.rb:2
+arg = arg + 3
+# jump 20
+jump2.rb:20
+puts arg
+# cont
+1
+15
+r3
+12
+done

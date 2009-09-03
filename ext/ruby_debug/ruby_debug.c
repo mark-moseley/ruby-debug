@@ -387,6 +387,7 @@ debug_context_create(VALUE thread)
     debug_context->breakpoint = Qnil;
     debug_context->jump_pc = NULL;
     debug_context->jump_cfp = NULL;
+    debug_context->old_iseq_catch = NULL;
     if(rb_obj_class(thread) == cDebugThread)
         CTX_FL_SET(debug_context, CTX_FL_IGNORE);
     return Data_Wrap_Struct(cContext, debug_context_mark, debug_context_free, debug_context);
@@ -769,6 +770,20 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
 
     /* only the current thread can proceed */
     locker = thread->self;
+
+    /* restore catch tables removed for jump */
+    if (debug_context->old_iseq_catch != NULL)
+    {
+        int i = 0;
+        while (debug_context->old_iseq_catch[i].iseq != NULL)
+        {
+            debug_context->old_iseq_catch[i].iseq->catch_table = debug_context->old_iseq_catch[i].catch_table;
+            debug_context->old_iseq_catch[i].iseq->catch_table_size = debug_context->old_iseq_catch[i].catch_table_size;
+            i++;
+        }
+        free(debug_context->old_iseq_catch);
+        debug_context->old_iseq_catch = NULL;
+    }
 
     /* make sure all threads have event flag set so we'll get its events */
     st_foreach(thread->vm->living_threads, set_thread_event_flag_i, 0);
@@ -2298,8 +2313,31 @@ FUNC_FASTCALL(do_jump)(rb_thread_t *th, rb_control_frame_t *cfp)
     debug_context->last_file = NULL;
     debug_context->stop_next = 1;
 
-    if (cfp != jump_cfp)
+    if (cfp < jump_cfp)
     {
+        /* save all intermediate-frame catch tables
+           +1 for target frame
+           +1 for array terminator
+         */
+        int frames = jump_cfp - cfp + 2;
+        debug_context->old_iseq_catch = (iseq_catch_t*)malloc(frames * sizeof(iseq_catch_t));
+        MEMZERO(debug_context->old_iseq_catch, iseq_catch_t, frames);
+        frames = 0;
+        do
+        {
+            if (cfp->iseq != NULL)
+            {
+                debug_context->old_iseq_catch[frames].iseq = cfp->iseq;
+                debug_context->old_iseq_catch[frames].catch_table = cfp->iseq->catch_table;
+                debug_context->old_iseq_catch[frames].catch_table_size = cfp->iseq->catch_table_size;
+                cfp->iseq->catch_table = NULL;
+                cfp->iseq->catch_table_size = 0;
+
+                frames++;
+            }
+            cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
+        } while (cfp <= jump_cfp);
+
         jump_cfp->iseq->catch_table_size = 1;
         jump_cfp->iseq->catch_table = 
             create_catch_table(debug_context, jump_pc - jump_cfp->iseq->iseq_encoded);
@@ -2307,6 +2345,8 @@ FUNC_FASTCALL(do_jump)(rb_thread_t *th, rb_control_frame_t *cfp)
 
         JUMP_TAG(TAG_RAISE);
     }
+    else if (cfp > jump_cfp)
+        rb_raise(rb_eRuntimeError, "Invalid jump frame target");
 
     cfp->pc = jump_pc;
     return(cfp);

@@ -22,4 +22,14 @@ class TestBreakpoints < Test::Unit::TestCase
                                 "--script #{script} -- ./#{testname}.rb"))
     end
   end
+
+  def test_basic_2
+    testname='jump2'
+    Dir.chdir(@@SRC_DIR) do 
+      script = File.join('data', testname + '.cmd')
+      assert_equal(true, 
+                   run_debugger(testname,
+                                "--script #{script} -- ./#{testname}.rb"))
+    end
+  end
 end
