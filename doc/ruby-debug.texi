@@ -11,7 +11,7 @@
 @c See the "Inserting Quote Characters" node in the Texinfo manual
 @set txicodequoteundirected
 @set txicodequotebacktick
-@set RDEBUG_VERSION 0.10.4
+@set RDEBUG_VERSION 0.11.6
 
 @macro Example {}
 @iftex
@@ -62,7 +62,7 @@
 @sp 1
 @subtitle @value{EDITION} Edition
 @subtitle @value{UPDATED-MONTH}
-@author Rocky Bernstein and Kent Sibilev
+@author Rocky Bernstein, Kent Sibilev, and Mark Moseley
 @page
 @ifset WHERETO
 @tex
@@ -94,7 +94,7 @@ This is the @value{EDITION} Edition, @value{UPDATED}
 * Debugger Module and Class::   ruby-debug's Debugger module and class
 
 Appendix
-* Using from Subversion::
+* Using from GitHub::
 
 Indexes (nodes containing large menus)
 * Class Module Index::        An item for Class, Module, and Methods.
@@ -179,10 +179,11 @@ triangle.rb:4 def hanoi(n,a,b,c)
    8    end
 (rdb:1) @b{l}
 [9, 18] in ./triangle.rb
-   9    return tri
+   9    tri
    10  end
    11  
    12  puts triangle(3)
+   13  puts "done"
 (rdb:1) @b{list 1,100}
 [1, 100] in ./triangle.rb
    1  #!/usr/bin/env ruby
@@ -193,10 +194,11 @@ triangle.rb:4 def hanoi(n,a,b,c)
    6    0.upto(n) do |i|
    7      tri += i
    8    end
-   9    return tri
+   9    tri
    10  end
    11  
-   12  puts triangle(3)
+   12  t = triangle(3)
+   13  puts t
 (rdb:1) 
 @end smallexample
 
@@ -232,7 +234,7 @@ the remaining 8 lines.  The @code{list} command can be abbreviated
 with @code{l} which is what we use next. Notice that when we use this
 a second time, we continue listing from the place we last left
 off. The desired range of lines this time is lines 9 to 18; but since
-the program ends as line 12, only the remaining 4 lines are shown.
+the program ends at line 13, only the remaining 5 lines are shown.
 
 If you want to set how many lines to print by default rather than use
 the initial number of lines, 10, use the @code{set listsize} command
@@ -248,7 +250,7 @@ Now let us step through the program.
 @smallexample
 (rdb:1) @b{step}
 triangle.rb:12
-puts triangle(3)
+t = triangle(3)
 (rdb:1) @b{@key{<RET>}}
 triangle.rb:5
 tri = 0
@@ -271,15 +273,14 @@ there are of course lots of other ways too.). When we look at the
 value of @code{tri} the first time, we see it is @code{nil}. Again we
 are stopped @emph{before} the assignment on line 5, and this variable
 hasn't been set previously. However after issuing another ``step''
-command we see that the value is 0 as expected. You could issue the
-step and print comman in one shot:
+command we see that the value is 0 as expected.
 
 However if every time we stop we want to see the value of @code{tri}
 to see how things are going stop, there is a better way by setting a
 display expression (@pxref{DisplayCommands}).
 
 @smallexample
-(rdb:1) display tri
+(rdb:1) @b{display tri}
 1: tri = 0
 @end smallexample
 
@@ -304,11 +305,19 @@ Tracing(1):triangle.rb:7 tri += i
 Tracing(1):triangle.rb:7 tri += i
 1: tri = 3
 2: i = 3
-Tracing(1):triangle.rb:9 return tri
+Tracing(1):triangle.rb:9 tri
 1: tri = 6
-2: i =
+2: i = 3
+6
+Tracing(1):triangle.rb:13 puts t
+1: tri =
+2: i = 
+1: tri =
+2: i = 
+triangle.rb:13
+puts t
 (rdb:1) @b{quit}
-Really quit? (y/n) y
+Really quit? (y/n) @b{y}
 @end smallexample
 
 So far, so good. A you can see from the above to get out of the
@@ -336,38 +345,38 @@ hanoi.rb:3 def hanoi(n,a,b,c)
    1  #!/usr/bin/ruby
    2
 => 3  def hanoi(n,a,b,c)
-   4      if n-1 > 0
-   5         hanoi(n-1, a, c, b)
-   6      end
-   7      puts "Move disk %s to %s" % [a, b]
-   8      if n-1 > 0
-   9         hanoi(n-1, c, b, a)
-   10      end
-   11  end
+   4    if n-1 > 0
+   5      hanoi(n-1, a, c, b)
+   6    end
+   7    puts "Move disk %s to %s" % [a, b]
+   8    if n-1 > 0
+   9      hanoi(n-1, c, b, a)
+   10   end
+   11 end
    12
-   13  i_args=ARGV.length
-   14  if i_args > 1
-   15      puts "*** Need number of disks or no parameter"
-   16      exit 1
-   17  end
+   13 i_args=ARGV.length
+   14 if i_args > 1
+   15   puts "*** Need number of disks or no parameter"
+   16   exit 1
+   17 end
    18
-   19  n=3
+   19 n=3
    20
-   21  if i_args > 0
-   22      begin
-   23        n = ARGV[0].to_i
-   24      rescue ValueError, msg:
-   25          print "** Expecting an integer, got: %s" % ARGV[0].to_s
-   26        exit 2
-   27      end
-   28  end
+   21 if i_args > 0
+   22   begin
+   23     n = ARGV[0].to_i
+   24   rescue ValueError, msg
+   25     print "** Expecting an integer, got: %s" % ARGV[0].to_s
+   26     exit 2
+   27   end
+   28 end
    29
-   30  if n < 1 or n > 100
-   31      puts "*** number of disks should be between 1 and 100"
-   32      exit 2
-   33  end
+   30 if n < 1 or n > 100
+   31   puts "*** number of disks should be between 1 and 100"
+   32   exit 2
+   33 end
    34
-   35  hanoi(n, :a, :b, :c)
+   35 hanoi(n, :a, :b, :c)
 (rdb:1)
 @end smallexample
 
@@ -379,7 +388,7 @@ see what private methods we can call before running @code{def hanoi}
 (rdb:1) @b{set autoeval on}
 autoeval is on.
 (rdb:1) @b{private_methods}
-["select", "URI", "local_variables", "lambda", "chomp", ... 
+[:require_relative, :Digest, :default_src_encoding, :debug_program, ... 
 @end smallexample
 
 The @code{set autoeval} (@pxref{Autoeval}) command causes any commands
@@ -398,43 +407,38 @@ sort and put into columns lists like this using the print command, @code{ps}.
 
 @smallexample
 (rdb:1) @b{ps private_methods}
-Array                    exit!                 puts                        warn
-Float                    fail                  raise                       y
-Integer                  fork                  rand
-Rational                 format                readline
-String                   gem_original_require  readlines
-URI                      getc                  remove_instance_variable
-`                        gets                  scan
-abort                    global_variables      select
-active_gem_with_options  gsub                  set_trace_func
-at_exit                  gsub!                 singleton_method_added
-autoload                 initialize            singleton_method_removed
-autoload?                initialize_copy       singleton_method_undefined
-binding                  iterator?             sleep
-block_given?             lambda                split
-callcc                   load                  sprintf
-caller                   local_variables       srand
-catch                    location_of_caller    sub
-chomp                    loop                  sub!
-chomp!                   method_missing        syscall
-chop                     open                  system
-chop!                    p                     test
-dbg_print                pp                    throw
-dbg_puts                 print                 timeout
-eval                     printf                trace_var
-exec                     proc                  trap
-exit                     putc                  untrace_var
+Array         debug_program         p                           spawn
+Complex       default_src_encoding  pp                          sprintf
+Digest        eval                  print                       srand
+Float         exec                  printf                      syscall
+Integer       exit                  proc                        system
+Pathname      exit!                 process_options             test
+Rational      fail                  putc                        throw
+String        fork                  puts                        trace_var
+__callee__    format                raise                       trap
+__method__    gem                   rand                        untrace_var
+`             gets                  readline                    warn
+abort         global_variables      readlines                   whence_file
+at_exit       initialize            remove_instance_variable    y
+autoload      initialize_copy       require
+autoload?     iterator?             require_relative
+binding       lambda                select
+block_given?  load                  set_trace_func
+caller        local_variables       singleton_method_added
+catch         loop                  singleton_method_removed
+dbg_print     method_missing        singleton_method_undefined
+dbg_puts      open                  sleep
 @end smallexample
 
-Now let's see what happens after stepping
+Now let's see what happens after stepping:
 
 @smallexample
-(rdb:1) @b{private.methods.member?("hanoi")}
+(rdb:1) @b{private_methods.member?(:hanoi)}
 false
 (rdb:1) @b{step}
 hanoi.rb:13
 i_args=ARGV.length
-(rdb:1) @b{private_methods.member?("hanoi")}
+(rdb:1) @b{private_methods.member?(:hanoi)}
 true
 (rdb:1)
 @end smallexample
@@ -483,22 +487,22 @@ Breakpoint 1 at hanoi.rb:4
 4: b.inspect = :b
 (rdb:1) @b{continue}
 Breakpoint 1 at hanoi.rb:4
-./hanoi.rb:4 
-if n-1 > 0
 1: n = 2
 3: a.inspect = :a
 4: b.inspect = :c
-(rdb:1) @b{c}
-Breakpoint 1 at hanoi.rb:4
 ./hanoi.rb:4 
 if n-1 > 0
+(rdb:1) @b{c}
+Breakpoint 1 at hanoi.rb:4
 1: n = 1
 3: a.inspect = :a
 4: b.inspect = :b
+./hanoi.rb:4 
+if n-1 > 0
 (rdb:1) @b{where}
 --> #0 Object.hanoi(n#Fixnum, a#Symbol, b#Symbol, c#Symbol) at line hanoi.rb:4
-    #1 Object.-(n#Fixnum, a#Symbol, b#Symbol, c#Symbol) at line hanoi.rb:5
-    #2 Object.-(n#Fixnum, a#Symbol, b#Symbol, c#Symbol) at line hanoi.rb:5
+    #1 Object.hanoi(n#Fixnum, a#Symbol, b#Symbol, c#Symbol) at line hanoi.rb:5
+    #2 Object.hanoi(n#Fixnum, a#Symbol, b#Symbol, c#Symbol) at line hanoi.rb:5
     #3 at line hanoi.rb:35
 (rdb:1) 
 @end smallexample
@@ -548,7 +552,7 @@ NameError Exception: undefined local variable or method `i_args' for main:Object
 (rdb:1) @b{p n}
 3
 (rdb:1) @b{down 2}
-#2 Object.-(n#Fixnum, a#Symbol, b#Symbol, c#Symbol) at line hanoi.rb:5
+#2 Object.hanoi(n#Fixnum, a#Symbol, b#Symbol, c#Symbol) at line hanoi.rb:5
 (rdb:1) @b{p n}
 2
 @end smallexample
@@ -578,19 +582,19 @@ impractical for a couple of reasons.
 @item 
 The debugger just doesn't work when run at the outset.  By necessity
 any debugging changes to the behavior or the program in slight and
-subtle ways, and sometimes this can hinder finding the bugs.
+subtle ways, and sometimes this can hinder finding bugs.
 @item 
 There's a lot of code which that needs to get run before the part you
-want to inspect. Running this code takes time and you don't the
-overhead of the debugger in this first part.
+want to inspect. Running this code takes time and you don't want the
+overhead of the debugger.
 @end enumerate
 
-In this section we'll delve show how to enter the code in the middle
+In this section we'll show how to enter the code in the middle
 of your program, while delving more into the debugger operation.
 
 In this section we will also use unit testing. Using unit tests will
-greatly reduce the amount of debugging needed while at the same time
-increase the quality of your program.
+greatly reduce the amount of debugging needed, while at the same time, 
+will increase the quality of your program.
 
 What we'll do is take the @code{triangle} code from the first session
 and write a unit test for that. In a sense we did write a mini-test
@@ -608,7 +612,8 @@ not.@footnote{@code{rdebug} resets @code{$0} to try to make things
 like this work.}
 @smallexample
   if __FILE__ == $0 
-    puts triangle(3)
+    t = triangle(3)
+    puts t
   end
 @end smallexample
 
@@ -616,12 +621,12 @@ Let's call this file @code{tri2.rb}.
 
 Okay, we're now ready to write our unit test. We'll use
 @code{"test/unit"} which comes with the standard Ruby distribution.
-Here's the test code:
+Here's the test code; it should be in the same directory as tri2.rb.
 
 @smallexample
   #!/usr/bin/env ruby
   require 'test/unit'
-  require 'tri2.rb'
+  require_relative './tri2.rb'
 
   class TestTri < Test::Unit::TestCase
     def test_basic
@@ -647,18 +652,16 @@ to modify the code as shown here.}
 One way to do this is to add the following before the place you want
 to stop:
 @smallexample
-  require 'rubygems'
-  require 'ruby-debug/debugger'
+  require 'ruby-debug'
+  debugger
 @end smallexample
-The line @code{require "rubygems"} is needed if @code{ruby-debug} is
-installed as a Ruby gem.
 
 Let's add this code just after entering @code{test_basic}:
 @smallexample
   ... 
   def test_basic
-    @b{require "rubygems"}
-    @b{require "ruby-debug/debugger"}
+    @b{require "ruby-debug"}
+    @b{debugger}
     solutions = []
    ...
 @end smallexample
@@ -701,7 +704,7 @@ tracking calls from the outset
 #!/usr/bin/env ruby
 require 'test/unit'
 require 'tri2.rb'
-require 'rubygems'
+require 'ruby-debug'
 @b{Debugger.start}
 
 class TestTri < Test::Unit::TestCase
@@ -726,26 +729,19 @@ test-tri2.rb:11
 solutions = []
 (rdb:1) @b{where}
 --> #0 TestTri.test_basic at line test-tri2.rb:11
-    #1 Kernel.__send__(result#Test::Unit::TestResult) 
-       at line /usr/lib/ruby/1.8/test/unit/testcase.rb:70
-    #2 Test::Unit::TestCase.run(result#Test::Unit::TestResult) 
-       at line /usr/lib/ruby/1.8/test/unit/testcase.rb:70
-...
-    #11 Test::Unit::AutoRunner.run 
-       at line /usr/lib/ruby/1.8/test/unit/autorunner.rb:200
-    #12 Test::Unit::AutoRunner.run(force_standalone#FalseClass, ...
-       at line /usr/lib/ruby/1.8/test/unit/autorunner.rb:13
-    #13 at line /usr/lib/ruby/1.8/test/unit.rb:285
+    #1 MiniTest::Unit::TestCase.run(runner#MiniTest::Unit)
+       at line /usr/local/lib/ruby/1.9.1/minitest/unit.rb:458
+    #2 MiniTest::Unit.run_test_suites
+       at line /usr/local/lib/ruby/1.9.1/minitest/unit.rb:426
+    #3 MiniTest::Unit.run
+       at line /usr/local/lib/ruby/1.9.1/minitest/unit.rb:393
+    #4 at line /usr/local/lib/ruby/1.9.1/minitest/unit.rb:334
 (rdb:1) 
 @end smallexample
 
 Much better. But again let me emphasize that the parameter types are
 those of the corresponding variables that @emph{currently} exist, and
-this might have changed since the time when the call was made. Even so
-and even though we only have @emph{types} listed, it's a pretty good
-bet that when @code{Test::Unit} was first called, shown above as frame
-12, that the values of its two parameters were @code{false} and
-@code{nil}.
+this might have changed since the time when the call was made.
 
 @node Debugger.start with a block
 @section Using the @code{Debugger.start} with a block
@@ -775,7 +771,7 @@ in @code{irb}:
 
 @smallexample
 $ @b{irb}
-irb(main):001:0> @b{require 'rubygems'; require 'ruby-debug'}
+irb(main):001:0> @b{require 'ruby-debug'}
 => true
 irb(main):002:0> @b{def foo}
 irb(main):003:1> @b{x=1}
@@ -783,13 +779,11 @@ irb(main):004:1> @b{puts 'foo'}
 irb(main):005:1> @b{end}
 => nil
 irb(main):006:0> @b{Debugger.start@{debugger; foo@}}
-(irb):6
-(rdb:1) @b{s}
 (irb):3
-(rdb:1) @b{p x}
-nil
+
 (rdb:1) @b{s}
 (irb):4
+
 (rdb:1) @b{p x}
 1
 (rdb:1) @b{s}
@@ -812,7 +806,7 @@ Java or even Bash@footnote{this is just an excuse to put in a
 shameless plug for my bash debugger @url{http://bashdb.sf.net}}, there
 may be a number of things that seem or feel a little bit different and
 may confuse you. A number of these things aren't oddities of the
-debugger per see, so much as a difference in how Ruby works compared to
+debugger per se, so much as a difference in how Ruby works compared to
 those other languages. Because Ruby works a little differently from
 those other languages, writing a debugger has to also be a little
 different as well if it is to be useful.
@@ -858,7 +852,8 @@ Sample Session}.
   4    sum +=i 
   5   end
   6 end
-  7 puts triangle(3)
+  7 t = triangle(3)
+  8 puts t
 @end smallexample
 
 Let's stop inside the @code{inject} block:
@@ -3743,8 +3738,8 @@ call.
 
 @end table
 
-@node Using from Subversion
-@appendix Building and Installing from rubyforge's Subversion Repository
+@node Using from GitHub
+@appendix Building and Installing from the GitHub Repository
 
 Here are Unix-centric instructions. If you have Microsoft Windows or
 OSX some of the below may need adjusting.
