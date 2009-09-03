@@ -4,6 +4,7 @@
 #include <vm_core.h>
 #include <iseq.h>
 #include <version.h>
+#include <eval_intern.h>
 #include <insns.inc>
 #include <insns_info.inc>
 #include "ruby_debug.h"
@@ -684,7 +685,7 @@ create_catch_table(debug_context_t *debug_context, unsigned long cont)
     catch_table->type = CATCH_TYPE_RESCUE;
     catch_table->start = 0;
     catch_table->end = ULONG_MAX;
-    catch_table->cont = cont - insn_len(BIN(trace));
+    catch_table->cont = cont;
     catch_table->sp = 0;
 
     return(catch_table);
@@ -1024,7 +1025,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
                 /* create a new catch table to catch this exception, and put it in the current iseq */
                 cfp->iseq->catch_table_size = 1;
                 cfp->iseq->catch_table =
-                    create_catch_table(debug_context, top_frame->info.runtime.last_pc - cfp->iseq->iseq_encoded);
+                    create_catch_table(debug_context, top_frame->info.runtime.last_pc - cfp->iseq->iseq_encoded - insn_len(BIN(trace)));
                 break;
             }
         }
@@ -2276,6 +2277,8 @@ FUNC_FASTCALL(do_jump)(rb_thread_t *th, rb_control_frame_t *cfp)
 {
     VALUE context;
     debug_context_t *debug_context;
+    rb_control_frame_t *jump_cfp;
+    VALUE *jump_pc;
 
     thread_context_lookup(th->self, &context, &debug_context, 0);
     if (debug_context == NULL)
@@ -2283,17 +2286,29 @@ FUNC_FASTCALL(do_jump)(rb_thread_t *th, rb_control_frame_t *cfp)
     cfp->pc[-2] = debug_context->saved_jump_ins[0];
     cfp->pc[-1] = debug_context->saved_jump_ins[1];
 
-    cfp = debug_context->jump_cfp;
-    if ((debug_context->jump_pc < cfp->iseq->iseq_encoded) || (debug_context->jump_pc >= cfp->iseq->iseq_encoded + cfp->iseq->iseq_size))
+    if ((debug_context->jump_pc < debug_context->jump_cfp->iseq->iseq_encoded) || 
+        (debug_context->jump_pc >= debug_context->jump_cfp->iseq->iseq_encoded + cfp->iseq->iseq_size))
         rb_raise(rb_eRuntimeError, "Invalid jump PC target");
-    cfp->pc = debug_context->jump_pc;
 
+    jump_cfp = debug_context->jump_cfp;
+    jump_pc = debug_context->jump_pc;
     debug_context->jump_pc = NULL;
     debug_context->jump_cfp = NULL;
     debug_context->last_line = 0;
     debug_context->last_file = NULL;
     debug_context->stop_next = 1;
-    th->cfp = cfp;
+
+    if (cfp != jump_cfp)
+    {
+        jump_cfp->iseq->catch_table_size = 1;
+        jump_cfp->iseq->catch_table = 
+            create_catch_table(debug_context, jump_pc - jump_cfp->iseq->iseq_encoded);
+        jump_cfp->iseq->catch_table->sp = -1;
+
+        JUMP_TAG(TAG_RAISE);
+    }
+
+    cfp->pc = jump_pc;
     return(cfp);
 }
 
@@ -2356,7 +2371,7 @@ context_jump(int argc, VALUE *argv, VALUE self)
                 if (cfp->iseq->insn_info_table[i].line_no != line)
                     continue;
 
-                /* hijack the currently running code so that we can change the frame PC(s) */
+                /* hijack the currently running code so that we can change the frame PC */
                 debug_context->saved_jump_ins[0] = cfp_start->pc[0];
                 debug_context->saved_jump_ins[1] = cfp_start->pc[1];
                 cfp_start->pc[0] = opt_call_c_function;

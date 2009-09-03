@@ -1,0 +1,56 @@
+jump.rb:1
+def foo
+# # ********************************************************
+# # This tests jump command
+# # ********************************************************
+# set debuggertesting on
+Currently testing the debugger is on.
+# set callstyle last
+Frame call-display style is last.
+# set force off
+force-stepping is off.
+# break 7
+Breakpoint 1 file ./jump.rb, line 7
+# cont
+Breakpoint 1 at jump.rb:7
+jump.rb:7
+puts j
+# jump -1
+jump.rb:6
+j = j + k
+# cont
+Breakpoint 1 at jump.rb:7
+jump.rb:7
+puts j
+# delete 1
+# jump -1
+jump.rb:6
+j = j + k
+# jump +1
+jump.rb:7
+puts j
+# next
+21
+jump.rb:6
+j = j + k
+# jump 2
+jump.rb:2
+j = 0
+# cont
+11
+22
+34
+12
+23
+35
+13
+24
+36
+14
+25
+37
+15
+26
+38
+38
+done
