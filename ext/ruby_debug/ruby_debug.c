@@ -144,7 +144,11 @@ ruby_method_ptr(VALUE class, ID meth_id)
 #else
     rb_method_entry_t * method;
     method = rb_method_entry(class, meth_id);
+#ifdef HAVE_ST_BODY
     return (void *)method->body.cfunc.func;
+#else
+    return (void *)method->def->body.cfunc.func;
+#endif
 #endif
 }
 

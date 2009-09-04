@@ -182,8 +182,8 @@ triangle.rb:4 def hanoi(n,a,b,c)
    9    tri
    10  end
    11  
-   12  puts triangle(3)
-   13  puts "done"
+   12  t = triangle(3)
+   13  puts t
 (rdb:1) @b{list 1,100}
 [1, 100] in ./triangle.rb
    1  #!/usr/bin/env ruby
