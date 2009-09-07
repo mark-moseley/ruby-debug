@@ -2363,11 +2363,10 @@ FUNC_FASTCALL(do_jump)(rb_thread_t *th, rb_control_frame_t *cfp)
  *   Returns +true+ if jump to +line+ in filename +file+ was successful.
  */
 static VALUE
-context_jump(int argc, VALUE *argv, VALUE self)
+context_jump(VALUE self, VALUE line, VALUE file)
 {
     debug_context_t *debug_context;
     debug_frame_t *debug_frame;
-    VALUE line, file;
     int i;
     rb_thread_t *th;
     rb_control_frame_t *cfp;
@@ -2381,10 +2380,6 @@ context_jump(int argc, VALUE *argv, VALUE self)
     debug_frame = get_top_frame(debug_context);
     if (debug_frame == NULL)
         rb_raise(rb_eRuntimeError, "No frames collected.");
-
-    if (argc != 2)
-        rb_raise(rb_eArgError, "wrong number of arguments (%d for 2)", argc);
-    rb_scan_args(argc, argv, "2", &line, &file);
 
     line = FIX2INT(line);
 
@@ -2476,7 +2471,7 @@ Init_context()
              context_breakpoint, 0);      /* in breakpoint.c */
     rb_define_method(cContext, "set_breakpoint", 
              context_set_breakpoint, -1); /* in breakpoint.c */
-    rb_define_method(cContext, "jump", context_jump, -1);
+    rb_define_method(cContext, "jump", context_jump, 2);
 }
 
 /*
