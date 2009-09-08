@@ -726,7 +726,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
 
     hook_count++;
 
-    if ((iseq == NULL) && (event != RUBY_EVENT_RAISE))
+    if (((iseq == NULL) || (file == NULL)) && (event != RUBY_EVENT_RAISE))
         return;
     thread_context_lookup(thread->self, &context, &debug_context, 1);
 
@@ -1785,7 +1785,6 @@ context_frame_line(int argc, VALUE *argv, VALUE self)
     debug_context_t *debug_context;
     debug_frame_t *debug_frame;
     rb_control_frame_t *cfp;
-    rb_control_frame_t *cfp_end;
     rb_thread_t *th;
     VALUE *pc;
 
@@ -1799,7 +1798,6 @@ context_frame_line(int argc, VALUE *argv, VALUE self)
         return(INT2FIX(0));
 
     pc = GET_FRAME->info.runtime.last_pc;
-    cfp_end = RUBY_VM_END_CONTROL_FRAME(th);
     cfp = GET_FRAME->info.runtime.cfp;
     while (cfp > (rb_control_frame_t*)th->stack)
     {
@@ -1923,7 +1921,11 @@ context_copy_locals(debug_context_t *debug_context, debug_frame_t *debug_frame, 
     {
         /* Note rb_iseq_disasm() is instructive in coming up with this code */
         for (i = 0; i < iseq->local_table_size; i++)
-            rb_hash_aset(hash, rb_id2str(iseq->local_table[i]), *(cfp->dfp - iseq->local_size + i));
+        {
+            VALUE str = rb_id2str(iseq->local_table[i]);
+            if (str != 0)
+                rb_hash_aset(hash, str, *(cfp->dfp - iseq->local_size + i));
+        }
     }
 
     iseq = cfp->block_iseq;
@@ -1937,7 +1939,11 @@ context_copy_locals(debug_context_t *debug_context, debug_frame_t *debug_frame, 
             if (block_frame->iseq == cfp->block_iseq)
             {
                 for (i = 0; i < iseq->local_table_size; i++)
-                    rb_hash_aset(hash, rb_id2str(iseq->local_table[i]), *(block_frame->dfp - iseq->local_table_size + i - 1));
+                {
+                    VALUE str = rb_id2str(iseq->local_table[i]);
+                    if (str != 0)
+                        rb_hash_aset(hash, str, *(block_frame->dfp - iseq->local_table_size + i - 1));
+                }
                 return(hash);
             }
             block_frame = RUBY_VM_NEXT_CONTROL_FRAME(block_frame);
