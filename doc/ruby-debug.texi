@@ -815,7 +815,7 @@ In this respect, using the debugger may help you understand Ruby
 better.
 
 We've already seen two examples of such differences. One difference is
-the fact that we stop on method definitions or @code{def}'s and that's
+the fact that we stop on method definitions or @code{def}'s and that is
 because these are in fact executable statements. In other compiled
 languages this would not happen because that's already been done when
 you compile the program (or in Perl when it scans in the program). The
@@ -830,190 +830,17 @@ off new users to Ruby who are familiar with other languages and
 debugging in them.
 
 @menu
-* Stack Shows Scope Nesting::
-* More Frequent Evaluations per Line::
+* Stack No Longer Shows Scope Nesting::
 * Bouncing Around in Blocks (e.g. Iterators)::
 * No Parameter Values in a Call Stack::
 * Lines You Can Stop At::
 @end menu
 
-@node Stack Shows Scope Nesting
-@subsection Stack Shows Scope Nesting
-In a backtrace, you will find more stack frames than you might in say
-C.
-
-Consider another way to write the triangle program of @pxref{First
-Sample Session}.
-
-@smallexample
-  1 #!/usr/bin/env ruby
-  2 def triangle(n) 
-  3   (0..n).inject do |sum, i| 
-  4    sum +=i 
-  5   end
-  6 end
-  7 t = triangle(3)
-  8 puts t
-@end smallexample
-
-Let's stop inside the @code{inject} block:
-
-@smallexample
-$ @b{rdebug tri3.rb}
-(rdb:1) @b{c 4}
-tri3.rb:4
-sum +=i 
-(rdb:1) @b{where}
---> #0 Range.triangle at line tri3.rb:4
-    #1 Enumerable.inject at line tri3.rb:3
-    #2 Object.triangle(n#Fixnum) at line tri3.rb:3
-    #3 at line tri3.rb:7
-(rdb:1)
-@end smallexample
-Because a new scope was entered, it appears as a stack frame. Probably
-``scope'' frame would be a more appropriate name.
-
-@node More Frequent Evaluations per Line
-@subsection More Frequent Evaluations per Line
-Consider this simple program to compute the Greatest Common Divisor of
-two numbers:
-@smallexample
- 1 #!/usr/bin/env ruby
- 2 # GCD. We assume positive numbers
- 3
- 4 def gcd(a, b)
- 5   # Make: a <= b
- 6  if a > b
- 7     a, b = [b, a]
- 8  end
- 9
-10  return nil if a <= 0
-11 
-12  if a == 1 or b-a == 0
-13    return a
-14   end
-15   return gcd(b-a, a)
-16 end
-17
-18 a, b = ARGV[0..1].map @{|arg| arg.to_i@}
-19 puts "The GCD of %d and %d is %d" % [a, b, gcd(a, b)]
-@end smallexample
-
-Now let's try tracing a portion of the program to see what we get.
-@smallexample
-$ @b{rdebug gcd.rb 3 5}
-gcd.rb:4
-def gcd(a, b)
-(rdb:1) @b{step}
-gcd.rb:18
-a, b = ARGV[0..1].map @{|arg| arg.to_i@}
-(rdb:1) @b{step}
-gcd.rb:18
-a, b = ARGV[0..1].map @{|arg| arg.to_i@}
-(rdb:1) @b{step}
-gcd.rb:18
-a, b = ARGV[0..1].map @{|arg| arg.to_i@}
-(rdb:1) @b{step}
-(rdb:1) @b{break Object.gcd}
-Breakpoint 1 at Object::gcd
-(rdb:1) @b{continue}
-Breakpoint 1 at Object:gcd
-gcd.rb:4
-def gcd(a, b)
-(rdb:1) @b{set linetrace on}
-line tracing is on.
-(rdb:1) @b{continue}
-Tracing(1):gcd.rb:6 if a > b
-Tracing(1):gcd.rb:6 if a > b
-Tracing(1):gcd.rb:10 return nil if a <= 0
-Tracing(1):gcd.rb:10 return nil if a <= 0
-Tracing(1):gcd.rb:12 if a == 1 or b-a == 0
-Tracing(1):gcd.rb:12 if a == 1 or b-a == 0
-Tracing(1):gcd.rb:15 return gcd(b-a, a)
-Breakpoint 1 at Object:gcd
-gcd.rb:4
-def gcd(a, b)
-(rdb:1) 
-@end smallexample
-
-The thing to note here is that we see lots of lines duplicated. For
-example, the first line:
-@smallexample
-Tracing(1):gcd.rb:18 a, b = ARGV[0..1].map @{|arg| arg.to_i@}
-@end smallexample
-appears three times. If we were to break this line into the equivalent
-multi-line expression:
-@smallexample
-a, b = ARGV[0..1].map do |arg| 
-  arg.to_i
-end
-@end smallexample
-we would find one stop at the first line before running @code{map} and
-two listings of @code{arg.to_i}, once for each value of arg which here
-is 0 and then 1. Perhaps this is is not surprising because we have a
-loop here which gets run in this situation 3 times. A similar command
-@code{next}, can also be used to skip over loops and method
-calls.
-
-But what about all the duplicated @code{if} statements in @code{gcd}?
-Each one is listed twice whether or not we put the @code{if} at the
-beginning or the end. You will find this to be the case for any
-conditional statement such as @code{until} or @code{while}.
-
-Each statement appears twice because we stop once before the
-expression is evaluated and once after the expression is evaluated but
-before the if statement takes hold. There is a bug in Ruby up to
-version 1.8.6 in that we stop a second time before the evaluation, so
-examining values that may have changed during the expression
-evaluation doesn't work in these versions.
-
-If you are issuing a @code{step} command one at a time, the repetitive
-nature can be little cumbersome if not annoying. So @value{DBG} offers
-a variant called @code{step+} which forces a new line on every
-step. Let's try that.
-@smallexample
-(rdb:1) @b{R}
-Re exec'ing:
-	/usr/bin/rdebug gcd.rb 3 5
-gcd.rb:4
-def gcd(a, b)
-(rdb:1) @b{step+}
-gcd.rb:18
-a, b = ARGV[0..1].map @{|arg| arg.to_i@}
-(rdb:1) @b{step+}
-gcd.rb:19
-puts "The GCD of %d and %d is %d" % [a, b, gcd(a, b)]
-(rdb:1) @b{break Object.gcd}
-Breakpoint 1 at Object:gcd
-(rdb:1) @b{c}
-Breakpoint 1 at Object:gcd
-gcd.rb:4
-def gcd(a, b)
-(rdb:1) @b{set linetrace+}
-line tracing style is different consecutive lines.
-(rdb:1) @b{set linetrace on}
-line tracing is on.
-(rdb:1) @b{c}
-Tracing(1):gcd.rb:6 if a > b
-Tracing(1):gcd.rb:10 return nil if a <= 0
-Tracing(1):gcd.rb:12 if a == 1 or b-a == 0
-Tracing(1):gcd.rb:15 return gcd(b-a, a)
-Breakpoint 1 at Object:gcd
-gcd.rb:4
-def gcd(a, b)
-@end smallexample
-
-If you want @code{step+} to be the default behavior when stepping,
-issue the command @code{set forcestep on}, (@pxref{Forcestep}). I
-generally put this in my start-up file @code{.rdebugrc}.
-
-Similar to the difference between @code{step+} and @code{step} is
-@code{set linetrace+}. This removes duplicate consecutive line tracing.
-
-One last thing to note above is the use of a method name to set a
-breakpoint position, rather than a file and line number. Because
-method @code{gcd} is in the outermost scope, we use @code{Object} as the
-class name.
+@node Stack No Longer Shows Scope Nesting
+@subsection Stack No Longer Shows Scope Nesting
+In the Ruby 1.8 ruby-debug, backtraces will show more stack frames 
+that you might find in other languages, such as C. In the Ruby 1.9
+ruby-debug, this is no longer the case.
 
 @node Bouncing Around in Blocks (e.g. Iterators)
 @subsection Bouncing Around in Blocks (e.g.@: Iterators)
@@ -1058,7 +885,7 @@ primes.rb:3
 class SievePrime
 (rdb:1) @b{set linetrace on}
 line tracing is on.
-(rdb:1) @b{step 10}
+(rdb:1) @b{step 9}
 Tracing(1):primes.rb:4 @@odd_primes = []
 Tracing(1):primes.rb:5 def self.next_prime(&block)
 Tracing(1):primes.rb:23 SievePrime.next_prime do |prime|
@@ -1066,7 +893,6 @@ Tracing(1):primes.rb:6 candidate = 2
 Tracing(1):primes.rb:7 yield candidate
 Tracing(1):primes.rb:24 puts prime
 2
-Tracing(1):primes.rb:25 break if prime > 10
 Tracing(1):primes.rb:25 break if prime > 10
 Tracing(1):primes.rb:8 not_prime = false
 Tracing(1):primes.rb:9 candidate += 1
@@ -1121,21 +947,7 @@ puts $1
 @end smallexample
 
 The stopping points that Ruby records are the last two lines, lines 5
-and 6. If you run @code{ruby -rtracer} on this file you'll see that
-this is so:
-
-@smallexample
-$ ruby -rtracer lines.rb
-#0:lines.rb:5::-: /ix 
-#0:lines.rb:6::-: puts $1
-#0:lines.rb:6:Kernel:>: puts $1
-#0:lines.rb:6:IO:>: puts $1
-Yes#0:lines.rb:6:IO:<: puts $1
-#0:lines.rb:6:IO:>: puts $1
-
-#0:lines.rb:6:IO:<: puts $1
-#0:lines.rb:6:Kernel:<: puts $1
-@end smallexample
+and 6.
 
 Inside @code{ruby-debug} you an get a list of stoppable lines for a
 file using the @code{info file} command with the attribute
@@ -1208,8 +1020,10 @@ Options:
         --no-quit                    Do not quit when script finishes
         --no-rewrite-program         Do not set $0 to the program being debugged
         --no-stop                    Do not stop when script is loaded
+    -nx                              Not run debugger initialization files (e.g. .rdebugrc        
     -p, --port PORT                  Port used for remote debugging
     -r, --require SCRIPT             Require the library, before executing your script
+        --restart-script FILE        Name of the script file to run. Erased after read    
         --script FILE                Name of the script file to run
     -s, --server                     Listen for remote connections
     -w, --wait                       Wait for a client connection, implies -s option
@@ -1422,7 +1236,8 @@ people may want @option{--no-quit --no-control} to be the default
 behavior. One could write a wrapper script or set a shell alias to
 handle this. @DBG{} has another way to do this as well. Before
 processing command options if the file @code{$HOME/.rdboptrc} is found
-it is loaded. If you want to set the defaults in some other way, you
+(or, on Windows, @code{$HOME/rdbopt.ini}, it is loaded. 
+If you want to set the defaults in some other way, you
 can put Ruby code here and set variable @code{options} which is an
 OpenStruct. For example here's how you'd set @option{-no-quit} and
 change the default control port to 5000.
@@ -1526,13 +1341,8 @@ stop.
 To get the debugger class accessible from your Ruby program:
 
 @smallexample
-require 'rubygems'
 require 'ruby-debug'
 @end smallexample 
-(It is very likely that you've already require'd rubygems. If so, you
-don't have to do that again.) These commands need to be done only
-once.
-
 After @code{require 'ruby-debug'}, it's possible to set some of the
 debugger variables influence preferences. For example if you want to
 have @ttDBG run a @code{list} command every time it stops you set the
@@ -1703,11 +1513,11 @@ ruby-debug help v@value{RDEBUG_VERSION}
 Type 'help <command-name>' for help on a specific command
 
 Available commands:
-backtrace  delete   enable  help    next  quit     show    undisplay
-break      disable  eval    info    p     reload   source  up       
-catch      display  exit    irb     pp    restart  step    var      
-condition  down     finish  list    ps    save     thread  where    
-continue   edit     frame   method  putl  set      trace 
+backtrace  delete   enable  help  list    ps       save    thread     where
+break      disable  eval    info  method  putl     set     trace
+catch      display  exit    irb   next    quit     show    undisplay
+condition  down     finish  jump  p       reload   source  up
+continue   edit     frame   kill  pp      restart  step    var
 @end smallexample
 @end flushleft
 @c the above line break eliminates huge line overfull...
@@ -2666,7 +2476,7 @@ condition 1       # Change that! Unconditionally stop on breakpoint 1.
 @end example
 
 @node Resuming Execution
-@subsection Resuming Execution (@samp{step}, @samp{next}, @samp{finish}, @samp{continue})
+@subsection Resuming Execution (@samp{step}, @samp{next}, @samp{finish}, @samp{continue}, @samp{jump})
 
 A typical technique for using stepping is to set a breakpoint
 (@pxref{Breakpoints}) at the beginning of the function or the section
@@ -2689,6 +2499,7 @@ your script may stop even sooner, due to a breakpoint or a signal.
 * Next::          running the next statement skipping over functions (next)
 * Finish::        running until the return of a function or ``source'' (finish)
 * Continue::      continuing execution (continue)
+* Jump::          jumping to a new line (jump)
 @end menu
 
 @node Step
@@ -2763,11 +2574,6 @@ returns.
 If you want instead to terminate the program and debugger entirely,
 use @code{quit} (@pxref{Quitting the debugger, ,Quitting the debugger}).
 
-@emph{Note:} Releases before Ruby version 1.8.7 show the return line
-as the first line of the method. Starting with version 1.8.7, the last
-line executed will be shown as the return
-line. @url{http://rubyforge.org/tracker/?func=detail&atid=22040&aid=18749&group_id=426}
-
 @end table
 
 @node Continue
@@ -2788,6 +2594,14 @@ Should the program stop before that breakpoint is reached, for
 example, perhaps another breakpoint is reached first, in
 a listing of the breakpoints you won't see this entry in the list of
 breakpoints.
+@end table
+
+@node Jump
+@subsubsection Jump (@samp{jump})
+@table @code
+@kindex jump @r{[}+-@r{]} @ovar{line}
+@item jump @r{[}+-@r{]} @ovar{line}
+Change the next line to execute to the given line number.
 @end table
 
 @node ruby-debug settings
