@@ -1783,9 +1783,8 @@ context_frame_line(int argc, VALUE *argv, VALUE self)
 {
     VALUE frame;
     debug_context_t *debug_context;
-    debug_frame_t *debug_frame;
-    rb_control_frame_t *cfp;
     rb_thread_t *th;
+    rb_control_frame_t *cfp;
     VALUE *pc;
 
     debug_check_started();
@@ -1793,13 +1792,9 @@ context_frame_line(int argc, VALUE *argv, VALUE self)
     Data_Get_Struct(self, debug_context_t, debug_context);
     GetThreadPtr(context_thread_0(debug_context), th);
 
-    debug_frame = get_top_frame(debug_context);
-    if (debug_frame == NULL)
-        return(INT2FIX(0));
-
     pc = GET_FRAME->info.runtime.last_pc;
     cfp = GET_FRAME->info.runtime.cfp;
-    while (cfp > (rb_control_frame_t*)th->stack)
+    while (cfp > th->cfp)
     {
         if ((cfp->iseq != NULL) && (pc >= cfp->iseq->iseq_encoded) && (pc < cfp->iseq->iseq_encoded + cfp->iseq->iseq_size))
             return(INT2FIX(rb_vm_get_sourceline(cfp)));
