@@ -47,7 +47,8 @@ module Debugger
     end
 
     def at_tracing(file, line)
-      handler.at_tracing(self, file, line)
+      @tracing_started = true if File.identical?(file, File.join(Debugger::INITIAL_DIR, Debugger::PROG_SCRIPT))
+      handler.at_tracing(self, file, line) if @tracing_started
     end
 
     def at_line(file, line)
@@ -60,6 +61,7 @@ module Debugger
   end
   
   @reload_source_on_change = false
+  @tracing_started = false
   
   class << self
     # interface modules provide +handler+ object

@@ -26,10 +26,9 @@ class TestPM < Test::Unit::TestCase
       testname='post-mortem'
       script = File.join('data', testname + '.cmd')
       testname += '-osx' if Config::CONFIG['host_os'] =~ /^darwin/
-# FIXME: Issue #6 (+ two tests below)
-#     assert_equal(true,
-#                   run_debugger(testname,
-#                                "--script #{script} --post-mortem ./pm.rb"))
+     assert_equal(true,
+                   run_debugger(testname,
+                                "--script #{script} --post-mortem ./pm.rb"))
     end
   end
 
@@ -39,9 +38,9 @@ class TestPM < Test::Unit::TestCase
       ENV['COLUMNS'] = '80'
       testname='post-mortem-next'
       script = File.join('data', testname + '.cmd')
-#      assert_equal(true,
-#                   run_debugger(testname,
-#                                "--script #{script} --post-mortem ./pm.rb"))
+      assert_equal(true,
+                   run_debugger(testname,
+                                "--script #{script} --post-mortem ./pm.rb"))
     end
   end
   
@@ -51,9 +50,9 @@ class TestPM < Test::Unit::TestCase
       ENV['COLUMNS'] = '80'
       testname='pm-bug'
       script = File.join('data', testname + '.cmd')
-#      assert_equal(true,
-#                   run_debugger(testname,
-#                                "--script #{script} --post-mortem ./pm-bug.rb"))
+      assert_equal(true,
+                   run_debugger(testname,
+                                "--script #{script} --post-mortem ./pm-bug.rb"))
     end
   end
 

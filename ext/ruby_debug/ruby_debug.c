@@ -1794,7 +1794,7 @@ context_frame_line(int argc, VALUE *argv, VALUE self)
 
     pc = GET_FRAME->info.runtime.last_pc;
     cfp = GET_FRAME->info.runtime.cfp;
-    while (cfp > th->cfp)
+    while (cfp >= th->cfp)
     {
         if ((cfp->iseq != NULL) && (pc >= cfp->iseq->iseq_encoded) && (pc < cfp->iseq->iseq_encoded + cfp->iseq->iseq_size))
             return(INT2FIX(rb_vm_get_sourceline(cfp)));
