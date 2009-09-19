@@ -392,6 +392,7 @@ debug_context_create(VALUE thread)
     debug_context->jump_pc = NULL;
     debug_context->jump_cfp = NULL;
     debug_context->old_iseq_catch = NULL;
+    debug_context->thread_pause = 0;
     if(rb_obj_class(thread) == cDebugThread)
         CTX_FL_SET(debug_context, CTX_FL_IGNORE);
     return Data_Wrap_Struct(cContext, debug_context_mark, debug_context_free, debug_context);
@@ -888,11 +889,16 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
             debug_context->stop_next = 0;
         }
 
-        if(debug_context->stop_next == 0 || debug_context->stop_line == 0 ||
+        if (debug_context->thread_pause)
+        {
+            debug_context->thread_pause = 0;
+            call_at_line_check(self, debug_context, Qnil, context, file, line);
+        }
+        else if(debug_context->stop_next == 0 || debug_context->stop_line == 0 ||
             (breakpoint = check_breakpoints_by_pos(debug_context, file, line)) != Qnil)
         {
             call_at_line_check(self, debug_context, breakpoint, context, file, line);
-        }
+        } 
         break;
     }
     case RUBY_EVENT_CALL:
@@ -2431,6 +2437,31 @@ context_jump(VALUE self, VALUE line, VALUE file)
     return(INT2FIX(3)); /* couldn't find a line and file frame match */
 }
 
+/*
+ *   call-seq:
+ *      context.break -> bool
+ *
+ *   Returns +true+ if context is currently running and set flag to break it at next line
+ */
+static VALUE
+context_pause(VALUE self)
+{
+    debug_context_t *debug_context;
+    rb_thread_t *th;
+
+    debug_check_started();
+
+    Data_Get_Struct(self, debug_context_t, debug_context);
+    if (CTX_FL_TEST(debug_context, CTX_FL_DEAD))
+        return(Qfalse);
+
+    GetThreadPtr(context_thread_0(debug_context), th);
+    if (th == GET_THREAD())
+        return(Qfalse);
+
+    debug_context->thread_pause = 1;
+    return(Qtrue);
+}
 
 /*
  *   Document-class: Context
@@ -2473,6 +2504,7 @@ Init_context()
     rb_define_method(cContext, "set_breakpoint", 
              context_set_breakpoint, -1); /* in breakpoint.c */
     rb_define_method(cContext, "jump", context_jump, 2);
+    rb_define_method(cContext, "pause", context_pause, 0);
 }
 
 /*
