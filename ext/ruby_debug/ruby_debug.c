@@ -801,7 +801,14 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         debug_context->stack_size--;
     }
 
-    if (debug_context->thread_pause == 0) 
+    if (debug_context->thread_pause) 
+    {
+        debug_context->thread_pause = 0;
+        debug_context->stop_next = 1;
+        debug_context->dest_frame = -1;
+        moved = 1;
+    }
+    else
     {
         /* ignore a skipped section of code */
         if (CTX_FL_TEST(debug_context, CTX_FL_SKIPPED)) 
@@ -890,12 +897,6 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         }
         else if(debug_context->stack_size < debug_context->dest_frame)
         {
-            debug_context->stop_next = 0;
-        }
-
-        if (debug_context->thread_pause)
-        {
-            debug_context->thread_pause = 0;
             debug_context->stop_next = 0;
         }
 
