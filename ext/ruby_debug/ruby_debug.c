@@ -2319,7 +2319,7 @@ FUNC_FASTCALL(do_jump)(rb_thread_t *th, rb_control_frame_t *cfp)
     cfp->pc[-1] = debug_context->saved_jump_ins[1];
 
     if ((debug_context->jump_pc < debug_context->jump_cfp->iseq->iseq_encoded) || 
-        (debug_context->jump_pc >= debug_context->jump_cfp->iseq->iseq_encoded + cfp->iseq->iseq_size))
+        (debug_context->jump_pc >= debug_context->jump_cfp->iseq->iseq_encoded + debug_context->jump_cfp->iseq->iseq_size))
         rb_raise(rb_eRuntimeError, "Invalid jump PC target");
 
     jump_cfp = debug_context->jump_cfp;
