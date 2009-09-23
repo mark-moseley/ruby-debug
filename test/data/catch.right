@@ -1,4 +1,4 @@
-pm.rb:3
+pm-catch.rb:3
 def zero_div
 # # ***************************************************
 # # Test catch
@@ -26,12 +26,24 @@ No exceptions set to be caught.
 # catch ZeroDivisionError
 Catch exception ZeroDivisionError.
 # c
-Catchpoint at pm.rb:5: `divided by 0' (ZeroDivisionError)
+Catchpoint at pm-catch.rb:5: `divided by 0' (ZeroDivisionError)
 	from ../rdbg.rb:23:in `runner'
 	from ../rdbg.rb:32:in `<main>'
-pm.rb:5
+pm-catch.rb:5
 1/0
 # where
---> #0 Object.zero_div at line pm.rb:5
-    #1 at line pm.rb:8
-# quit
+--> #0 Object.zero_div at line pm-catch.rb:5
+    #1 at line pm-catch.rb:9
+# jump 6
+pm-catch.rb:6
+x = 6
+# cont
+6
+	./pm-catch.rb:10:in `<top (required)>'
+	tdebug.rb:61:in `debug_load'
+	tdebug.rb:61:in `debug_program'
+	tdebug.rb:252:in `<top (required)>'
+	../rdbg.rb:23:in `load'
+	../rdbg.rb:23:in `runner'
+	../rdbg.rb:32:in `<main>'
+Uncaught exception: RuntimeError

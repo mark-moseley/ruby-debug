@@ -14,4 +14,5 @@ info catch
 catch ZeroDivisionError
 c
 where
-quit
+jump 6
+cont
