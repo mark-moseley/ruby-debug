@@ -684,7 +684,7 @@ create_catch_table(debug_context_t *debug_context, unsigned long cont)
     GET_THREAD()->mild_compile_error++;
     /* compiling with option Qfalse (no options) prevents debug hook calls during this catch routine */
     catch_table->iseq = rb_iseq_compile_with_option(
-        rb_str_new_cstr("begin\nend"), rb_str_new_cstr("(exception catcher)"), INT2FIX(1), Qfalse);
+        rb_str_new_cstr(""), rb_str_new_cstr("(exception catcher)"), INT2FIX(1), Qfalse);
     GET_THREAD()->mild_compile_error--;
     GET_THREAD()->parse_in_eval--;
 
@@ -870,6 +870,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
                 if(self && binding == Qnil)
                     binding = create_binding(self);
                 save_top_binding(debug_context, binding);
+                thread->cfp->sp--;
                 call_at_line(context, debug_context, rb_str_new2(file), INT2FIX(line));
             }
 
