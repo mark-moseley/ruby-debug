@@ -36,6 +36,7 @@ static VALUE locker             = Qnil;
 static VALUE post_mortem        = Qfalse;
 static VALUE keep_frame_binding = Qfalse;
 static VALUE debug              = Qfalse;
+static VALUE catchall           = Qtrue;
 static VALUE track_frame_args   = Qfalse;
 
 static VALUE last_context = Qnil;
@@ -719,6 +720,32 @@ set_thread_event_flag_i(st_data_t key, st_data_t val, st_data_t flag)
 }
 
 static void
+catch_exception(debug_context_t *debug_context, VALUE mod_name)
+{
+    debug_frame_t *top_frame = get_top_frame(debug_context);
+    rb_control_frame_t *cfp = top_frame->info.runtime.cfp;
+
+    /* save the current catch table */
+    CTX_FL_SET(debug_context, CTX_FL_CATCHING);
+    debug_context->catch_table.old_catch_table_size = cfp->iseq->catch_table_size;
+    debug_context->catch_table.old_catch_table = cfp->iseq->catch_table;
+    debug_context->catch_table.mod_name = mod_name;
+    debug_context->catch_table.errinfo = rb_errinfo();
+
+    /* create a new catch table to catch this exception, and put it in the current iseq */
+    cfp->iseq->catch_table_size = 1;
+    cfp->iseq->catch_table =
+        create_catch_table(debug_context, top_frame->info.runtime.last_pc - cfp->iseq->iseq_encoded - insn_len(BIN(trace)));
+    cfp->iseq->catch_table->sp = -1;
+}
+
+static int
+exception_caught(debug_context_t *debug_context)
+{
+    return(1);
+}
+
+static void
 debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE klass)
 {
     VALUE context;
@@ -1021,7 +1048,9 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
 #else
             (RHASH_TBL(rdebug_catchpoints)->num_entries) == 0)
 #endif
-            break;
+        {
+            if (catchall == Qfalse) break;
+        }
 
         ancestors = rb_mod_ancestors(expn_class);
         for(i = 0; i < RARRAY_LEN(ancestors); i++)
@@ -1034,42 +1063,22 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
             hit_count = rb_hash_aref(rdebug_catchpoints, mod_name);
             if (hit_count != Qnil)
             {
-                debug_frame_t *top_frame = get_top_frame(debug_context);
-                rb_control_frame_t *cfp = top_frame->info.runtime.cfp;
-
-                /* save the current catch table */
-                CTX_FL_SET(debug_context, CTX_FL_CATCHING);
-                debug_context->catch_table.old_catch_table_size = cfp->iseq->catch_table_size;
-                debug_context->catch_table.old_catch_table = cfp->iseq->catch_table;
-                debug_context->catch_table.mod_name = mod_name;
-                debug_context->catch_table.errinfo = rb_errinfo();
-
-                /* create a new catch table to catch this exception, and put it in the current iseq */
-                cfp->iseq->catch_table_size = 1;
-                cfp->iseq->catch_table =
-                    create_catch_table(debug_context, top_frame->info.runtime.last_pc - cfp->iseq->iseq_encoded - insn_len(BIN(trace)));
-                cfp->iseq->catch_table->sp = -1;
+                catch_exception(debug_context, mod_name);
                 break;
             }
         }
 
-        /* If we stop the debugger, we may not be able to trace into
-           code that has an exception handler wrapped around it. So
-           the alternative is to force the user to do his own
-           Debugger.stop. */
-#ifdef NORMAL_CODE_MOVING_AFTER_
-        if( !NIL_P(rb_class_inherited_p(expn_class, rb_eSystemExit)) )
+        if (!exception_caught(debug_context))
         {
-            debug_stop(mDebugger);
+            catch_exception(debug_context, Qnil);
             break;
         }
-#endif
 
         break;
     }
     }
 
-    cleanup:
+cleanup:
   
     debug_context->stop_reason = CTX_STOP_NONE;
 
@@ -1465,6 +1474,21 @@ static VALUE
 debug_set_debug(VALUE self, VALUE value)
 {
     debug = RTEST(value) ? Qtrue : Qfalse;
+    return value;
+}
+
+/* :nodoc: */
+static VALUE
+debug_catchall(VALUE self)
+{
+    return catchall;
+}
+
+/* :nodoc: */
+static VALUE
+debug_set_catchall(VALUE self, VALUE value)
+{
+    catchall = RTEST(value) ? Qtrue : Qfalse;
     return value;
 }
 
@@ -2602,6 +2626,8 @@ Init_ruby_debug()
                   debug_set_track_frame_args, 1);
     rb_define_module_function(mDebugger, "debug", debug_debug, 0);
     rb_define_module_function(mDebugger, "debug=", debug_set_debug, 1);
+    rb_define_module_function(mDebugger, "catchall", debug_catchall, 0);
+    rb_define_module_function(mDebugger, "catchall=", debug_set_catchall, 1);
 
     cThreadsTable = rb_define_class_under(mDebugger, "ThreadsTable", rb_cObject);
 
