@@ -38,6 +38,7 @@ static VALUE keep_frame_binding = Qfalse;
 static VALUE debug              = Qfalse;
 static VALUE catchall           = Qtrue;
 static VALUE track_frame_args   = Qfalse;
+static VALUE skip_next_exception= Qfalse;
 
 static VALUE last_context = Qnil;
 static VALUE last_thread  = Qnil;
@@ -1029,6 +1030,15 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         VALUE expn_class, aclass;
         int i;
 
+        if ((thread->cfp->pc == NULL) || (debug_context->stack_size == 0))
+            break;
+
+        if (skip_next_exception == Qtrue)
+        {
+            skip_next_exception = Qfalse;
+            break;
+        }
+
         if(post_mortem == Qtrue && self)
         {
             binding = create_binding(self);
@@ -1490,6 +1500,14 @@ debug_set_catchall(VALUE self, VALUE value)
 {
     catchall = RTEST(value) ? Qtrue : Qfalse;
     return value;
+}
+
+/* :nodoc: */
+static VALUE
+debug_skip_next_exception(VALUE self)
+{
+    skip_next_exception = Qtrue;
+    return(Qtrue);
 }
 
 /* :nodoc: */
@@ -2628,6 +2646,7 @@ Init_ruby_debug()
     rb_define_module_function(mDebugger, "debug=", debug_set_debug, 1);
     rb_define_module_function(mDebugger, "catchall", debug_catchall, 0);
     rb_define_module_function(mDebugger, "catchall=", debug_set_catchall, 1);
+    rb_define_module_function(mDebugger, "skip_next_exception", debug_skip_next_exception, 0);
 
     cThreadsTable = rb_define_class_under(mDebugger, "ThreadsTable", rb_cObject);
 
