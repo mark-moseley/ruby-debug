@@ -514,7 +514,7 @@ save_call_frame(rb_event_flag_t event, debug_context_t *debug_context, VALUE sel
     else
         last_pc = GET_THREAD()->cfp->pc;
 
-    binding = self && RTEST(keep_frame_binding)? create_binding(self) : Qnil;
+    binding = RTEST(keep_frame_binding) ? create_binding(self) : Qnil;
 
     frame_n = debug_context->stack_size++;
     if(frame_n >= debug_context->stack_len)
@@ -582,7 +582,7 @@ filename_cmp(VALUE source, char *file)
 static VALUE
 create_binding(VALUE self)
 {
-    return(rb_binding_new());
+    return(self ? rb_binding_new() : Qnil);
 }
 
 inline static void
@@ -659,7 +659,7 @@ c_call_new_frame_p(VALUE klass, ID mid)
 static void 
 call_at_line_check(VALUE self, debug_context_t *debug_context, VALUE breakpoint, VALUE context, char *file, int line)
 {
-    VALUE binding = self? create_binding(self) : Qnil;
+    VALUE binding = create_binding(self);
     save_top_binding(debug_context, binding);
 
     debug_context->stop_reason = CTX_STOP_STEP;
@@ -902,7 +902,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
                 rb_hash_aset(rdebug_catchpoints, debug_context->catch_table.mod_name, hit_count);
                 debug_context->stop_reason = CTX_STOP_CATCHPOINT;
                 rb_funcall(context, idAtCatchpoint, 1, debug_context->catch_table.errinfo);
-                if(self && binding == Qnil)
+                if(binding == Qnil)
                     binding = create_binding(self);
                 save_top_binding(debug_context, binding);
                 call_at_line(context, debug_context, rb_str_new2(file), INT2FIX(line));
@@ -956,7 +956,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
             debug_frame = get_top_frame(debug_context);
             if(debug_frame)
                 binding = debug_frame->binding;
-            if(NIL_P(binding) && self)
+            if(binding == Qnil)
                 binding = create_binding(self);
             save_top_binding(debug_context, binding);
 
@@ -1030,7 +1030,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         VALUE expn_class, aclass;
         int i;
 
-        if ((thread->cfp->pc == NULL) || (debug_context->stack_size == 0))
+        if (debug_context->stack_size == 0)
             break;
 
         if (skip_next_exception == Qtrue)
