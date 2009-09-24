@@ -144,7 +144,7 @@ self = main
 starting
 stopped
 stack
---> #0 Object.scope2 at line scope-var.rb:10
+--> #0 Object.scope2 at line scope-var.rb:11
     #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #2 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -162,7 +162,7 @@ j = i * 10
 starting
 stopped
 stack
---> #0 Object.scope2 at line scope-var.rb:10
+--> #0 Object.scope2 at line scope-var.rb:12
     #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #2 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -181,7 +181,7 @@ scope3
 stopped
 stack
 --> #0 Object.scope3 at line scope-var.rb:17
-    #1 Object.scope2 at line scope-var.rb:10
+    #1 Object.scope2 at line scope-var.rb:12
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #3 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -198,7 +198,7 @@ s3_var1 = 789
 stopped
 stack
 --> #0 Object.scope3 at line scope-var.rb:18
-    #1 Object.scope2 at line scope-var.rb:10
+    #1 Object.scope2 at line scope-var.rb:12
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #3 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -214,7 +214,7 @@ s3_var2 = "scope3"
 starting
 stopped
 stack
---> #0 Object.scope2 at line scope-var.rb:10
+--> #0 Object.scope2 at line scope-var.rb:11
     #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #2 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -232,7 +232,7 @@ j = i * 10
 starting
 stopped
 stack
---> #0 Object.scope2 at line scope-var.rb:10
+--> #0 Object.scope2 at line scope-var.rb:12
     #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #2 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -251,7 +251,7 @@ scope3
 stopped
 stack
 --> #0 Object.scope3 at line scope-var.rb:17
-    #1 Object.scope2 at line scope-var.rb:10
+    #1 Object.scope2 at line scope-var.rb:12
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #3 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -268,7 +268,7 @@ s3_var1 = 789
 stopped
 stack
 --> #0 Object.scope3 at line scope-var.rb:18
-    #1 Object.scope2 at line scope-var.rb:10
+    #1 Object.scope2 at line scope-var.rb:12
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #3 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -284,7 +284,7 @@ s3_var2 = "scope3"
 starting
 stopped
 stack
---> #0 Object.scope2 at line scope-var.rb:10
+--> #0 Object.scope2 at line scope-var.rb:11
     #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #2 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -302,7 +302,7 @@ j = i * 10
 starting
 stopped
 stack
---> #0 Object.scope2 at line scope-var.rb:10
+--> #0 Object.scope2 at line scope-var.rb:12
     #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #2 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -321,7 +321,7 @@ scope3
 stopped
 stack
 --> #0 Object.scope3 at line scope-var.rb:17
-    #1 Object.scope2 at line scope-var.rb:10
+    #1 Object.scope2 at line scope-var.rb:12
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #3 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -338,7 +338,7 @@ s3_var1 = 789
 stopped
 stack
 --> #0 Object.scope3 at line scope-var.rb:18
-    #1 Object.scope2 at line scope-var.rb:10
+    #1 Object.scope2 at line scope-var.rb:12
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #3 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -354,7 +354,7 @@ s3_var2 = "scope3"
 starting
 stopped
 stack
---> #0 Object.scope2 at line scope-var.rb:10
+--> #0 Object.scope2 at line scope-var.rb:11
     #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #2 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -372,7 +372,7 @@ j = i * 10
 starting
 stopped
 stack
---> #0 Object.scope2 at line scope-var.rb:10
+--> #0 Object.scope2 at line scope-var.rb:12
     #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #2 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -391,7 +391,7 @@ scope3
 stopped
 stack
 --> #0 Object.scope3 at line scope-var.rb:17
-    #1 Object.scope2 at line scope-var.rb:10
+    #1 Object.scope2 at line scope-var.rb:12
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #3 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -408,7 +408,7 @@ s3_var1 = 789
 stopped
 stack
 --> #0 Object.scope3 at line scope-var.rb:18
-    #1 Object.scope2 at line scope-var.rb:10
+    #1 Object.scope2 at line scope-var.rb:12
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #3 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -424,7 +424,7 @@ s3_var2 = "scope3"
 starting
 stopped
 stack
---> #0 Object.scope2 at line scope-var.rb:10
+--> #0 Object.scope2 at line scope-var.rb:11
     #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #2 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -442,7 +442,7 @@ j = i * 10
 starting
 stopped
 stack
---> #0 Object.scope2 at line scope-var.rb:10
+--> #0 Object.scope2 at line scope-var.rb:12
     #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #2 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -461,7 +461,7 @@ scope3
 stopped
 stack
 --> #0 Object.scope3 at line scope-var.rb:17
-    #1 Object.scope2 at line scope-var.rb:10
+    #1 Object.scope2 at line scope-var.rb:12
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #3 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -478,7 +478,7 @@ s3_var1 = 789
 stopped
 stack
 --> #0 Object.scope3 at line scope-var.rb:18
-    #1 Object.scope2 at line scope-var.rb:10
+    #1 Object.scope2 at line scope-var.rb:12
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #3 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -494,7 +494,7 @@ s3_var2 = "scope3"
 starting
 stopped
 stack
---> #0 Object.scope2 at line scope-var.rb:10
+--> #0 Object.scope2 at line scope-var.rb:11
     #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #2 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -512,7 +512,7 @@ j = i * 10
 starting
 stopped
 stack
---> #0 Object.scope2 at line scope-var.rb:10
+--> #0 Object.scope2 at line scope-var.rb:12
     #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #2 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -531,7 +531,7 @@ scope3
 stopped
 stack
 --> #0 Object.scope3 at line scope-var.rb:17
-    #1 Object.scope2 at line scope-var.rb:10
+    #1 Object.scope2 at line scope-var.rb:12
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #3 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).
@@ -548,7 +548,7 @@ s3_var1 = 789
 stopped
 stack
 --> #0 Object.scope3 at line scope-var.rb:18
-    #1 Object.scope2 at line scope-var.rb:10
+    #1 Object.scope2 at line scope-var.rb:12
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
     #3 at line scope-var.rb:21
 Warning: saved frames may be incomplete; compare with caller(0).

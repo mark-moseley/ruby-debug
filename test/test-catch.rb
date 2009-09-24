@@ -4,8 +4,8 @@ require 'test/unit'
 # begin require 'rubygems' rescue LoadError end
 # require 'ruby-debug'; Debugger.start
 
-# Test condition command
-class TestBreakpoints < Test::Unit::TestCase
+# Test exception catching
+class TestExceptionCatch < Test::Unit::TestCase
 
   @@SRC_DIR = File.join(Dir.pwd, File.dirname(__FILE__)) unless
     defined?(@@SRC_DIR)
@@ -17,7 +17,7 @@ class TestBreakpoints < Test::Unit::TestCase
     testname='catch'
     Dir.chdir(@@SRC_DIR) do 
       script = File.join('data', testname + '.cmd')
-     assert_equal(true,
+      assert_equal(true,
                    run_debugger(testname,
                                 "--script #{script} -- ./pm-catch.rb"))
     end

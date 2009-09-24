@@ -4,8 +4,8 @@ require 'test/unit'
 # begin require 'rubygems' rescue LoadError end
 # require 'ruby-debug'; Debugger.start
 
-# Test 'edit' command handling.
-class TestEdit < Test::Unit::TestCase
+# Test tracing
+class TestTrace < Test::Unit::TestCase
 
   @@SRC_DIR = File.join(Dir.pwd, File.dirname(__FILE__)) unless
     defined?(@@SRC_DIR)
