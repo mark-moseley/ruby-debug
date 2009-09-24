@@ -87,9 +87,9 @@ static locked_thread_t *locked_tail = NULL;
    about where to stop next. reset_stopping_points removes/resets this
    information. */
 inline static const char *
-get_event_name(rb_event_flag_t _event)
+get_event_name(rb_event_flag_t event)
 {
-  switch (_event) {
+  switch (event) {
     case RUBY_EVENT_LINE:
       return "line";
     case RUBY_EVENT_CLASS:
@@ -490,12 +490,27 @@ call_at_line(VALUE context, debug_context_t *debug_context, VALUE file, VALUE li
     return rb_protect(call_at_line_unprotected, args, 0);
 }
 
+inline static debug_frame_t *
+get_top_frame(debug_context_t *debug_context)
+{
+    if(debug_context->stack_size == 0)
+        return NULL;
+    else
+        return &(debug_context->frames[debug_context->stack_size-1]);
+}
+
 static void
-save_call_frame(rb_event_flag_t _event, debug_context_t *debug_context, VALUE self, char *file, int line, ID mid)
+save_call_frame(rb_event_flag_t event, debug_context_t *debug_context, VALUE self, char *file, int line, ID mid)
 {
     VALUE binding;
     debug_frame_t *debug_frame;
+    VALUE *last_pc;
     int frame_n;
+
+    if ((event != RUBY_EVENT_LINE) && (get_top_frame(debug_context)))
+        last_pc = get_top_frame(debug_context)->info.runtime.last_pc;
+    else
+        last_pc = GET_THREAD()->cfp->pc;
 
     binding = self && RTEST(keep_frame_binding)? create_binding(self) : Qnil;
 
@@ -519,7 +534,7 @@ save_call_frame(rb_event_flag_t _event, debug_context_t *debug_context, VALUE se
     debug_frame->info.runtime.bp = GET_THREAD()->cfp->bp;
     debug_frame->info.runtime.block_iseq = GET_THREAD()->cfp->block_iseq;
     debug_frame->info.runtime.block_pc = NULL;
-    debug_frame->info.runtime.last_pc = GET_THREAD()->cfp->pc;
+    debug_frame->info.runtime.last_pc = last_pc;
     if (RTEST(track_frame_args))
         copy_scalar_args(debug_frame);
 }
@@ -566,15 +581,6 @@ static VALUE
 create_binding(VALUE self)
 {
     return(rb_binding_new());
-}
-
-inline static debug_frame_t *
-get_top_frame(debug_context_t *debug_context)
-{
-    if(debug_context->stack_size == 0)
-        return NULL;
-    else
-        return &(debug_context->frames[debug_context->stack_size-1]);
 }
 
 inline static void
@@ -870,7 +876,6 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
                 if(self && binding == Qnil)
                     binding = create_binding(self);
                 save_top_binding(debug_context, binding);
-                thread->cfp->sp--;
                 call_at_line(context, debug_context, rb_str_new2(file), INT2FIX(line));
             }
 
@@ -1058,6 +1063,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
                 cfp->iseq->catch_table_size = 1;
                 cfp->iseq->catch_table =
                     create_catch_table(debug_context, top_frame->info.runtime.last_pc - cfp->iseq->iseq_encoded - insn_len(BIN(trace)));
+                cfp->iseq->catch_table->sp = (cfp->pc == top_frame->info.runtime.last_pc) ? 1 : -1;
                 break;
             }
         }
