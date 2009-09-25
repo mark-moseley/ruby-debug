@@ -692,11 +692,9 @@ create_catch_table(debug_context_t *debug_context, unsigned long cont)
     GET_THREAD()->parse_in_eval++;
     GET_THREAD()->mild_compile_error++;
     /* compiling with option Qfalse (no options) prevents debug hook calls during this catch routine
-       note: exception catch routine needs to return zero so that frame will be returned to
-       proper state after the debugger catch
      */
     catch_table->iseq = rb_iseq_compile_with_option(
-        rb_str_new_cstr("0"), rb_str_new_cstr("(exception catcher)"), INT2FIX(1), Qfalse);
+        rb_str_new_cstr(""), rb_str_new_cstr("(exception catcher)"), INT2FIX(1), Qfalse);
     GET_THREAD()->mild_compile_error--;
     GET_THREAD()->parse_in_eval--;
 
@@ -737,7 +735,6 @@ catch_exception(debug_context_t *debug_context, VALUE mod_name)
     cfp->iseq->catch_table_size = 1;
     cfp->iseq->catch_table =
         create_catch_table(debug_context, top_frame->info.runtime.last_pc - cfp->iseq->iseq_encoded - insn_len(BIN(trace)));
-    cfp->iseq->catch_table->sp = -1;
 }
 
 static int
@@ -890,6 +887,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
                 rb_control_frame_t *cfp = top_frame->info.runtime.cfp;
                 int hit_count;
 
+                thread->cfp->sp--;
                 set_frame_source(event, debug_context, self, file, line, mid);
 
                 /* restore the proper catch table */
@@ -1027,7 +1025,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     case RUBY_EVENT_RAISE:
     {
         VALUE ancestors;
-        VALUE expn_class, aclass;
+        VALUE aclass;
         int i;
 
         if (debug_context->stack_size == 0)
@@ -1048,8 +1046,6 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
             rb_ivar_set(rb_errinfo(), rb_intern("@__debug_context"), debug_context_dup(debug_context, self));
         }
 
-        expn_class = rb_obj_class(rb_errinfo());
-
         if (rdebug_catchpoints == Qnil ||
             (debug_context->stack_size == 0) ||
             CTX_FL_TEST(debug_context, CTX_FL_CATCHING) ||
@@ -1062,7 +1058,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
             if (catchall == Qfalse) break;
         }
 
-        ancestors = rb_mod_ancestors(expn_class);
+        ancestors = rb_mod_ancestors(rb_obj_class(rb_errinfo()));
         for(i = 0; i < RARRAY_LEN(ancestors); i++)
         {
             VALUE mod_name;
