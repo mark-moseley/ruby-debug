@@ -718,14 +718,83 @@ set_thread_event_flag_i(st_data_t key, st_data_t val, st_data_t flag)
     return(ST_CONTINUE);
 }
 
-static void
+static int
+find_prev_line_start(rb_control_frame_t *cfp)
+{
+    int i, pos, line_no;
+    pos = cfp->pc - cfp->iseq->iseq_encoded;
+    for (i = 0; i < cfp->iseq->insn_info_size; i++)
+    {
+        if (cfp->iseq->insn_info_table[i].position != pos)
+            continue;
+
+        if (i == 0) return(0); // ???
+
+        pos = -1;
+        line_no = cfp->iseq->insn_info_table[--i].line_no;
+        do {
+            if (cfp->iseq->insn_info_table[i].line_no == line_no)
+                pos = cfp->iseq->insn_info_table[i].position;
+            else
+                break;
+            i--;
+        } while (i >= 0);
+
+        return(pos);
+    }
+    return(-1);
+}
+
+static rb_control_frame_t *
+FUNC_FASTCALL(do_catch)(rb_thread_t *th, rb_control_frame_t *cfp)
+{
+    VALUE context;
+    debug_context_t *debug_context;
+    debug_frame_t *top_frame;
+
+    thread_context_lookup(th->self, &context, &debug_context, 0);
+    if (debug_context == NULL)
+        rb_raise(rb_eRuntimeError, "Lost context in jump");
+    cfp->pc[-2] = debug_context->saved_jump_ins[0];
+    cfp->pc[-1] = debug_context->saved_jump_ins[1];
+
+    cfp->pc = debug_context->jump_pc;
+    
+    debug_context->jump_pc = NULL;
+    debug_context->jump_cfp = NULL;
+    debug_context->last_line = 0;
+    debug_context->last_file = NULL;
+    debug_context->stop_next = 1;
+
+    top_frame = get_top_frame(debug_context);
+
+    if (top_frame != NULL)
+    {
+        rb_control_frame_t *frame_cfp = top_frame->info.runtime.cfp;
+
+        /* restore the proper catch table */
+        frame_cfp->iseq->catch_table_size = debug_context->catch_table.old_catch_table_size;
+        frame_cfp->iseq->catch_table = debug_context->catch_table.old_catch_table;
+    }
+
+    CTX_FL_SET(debug_context, CTX_FL_CATCHING);
+    th->cfp->sp--;
+    return(cfp);
+}
+
+static int
 catch_exception(debug_context_t *debug_context, VALUE mod_name)
 {
-    debug_frame_t *top_frame = get_top_frame(debug_context);
-    rb_control_frame_t *cfp = top_frame->info.runtime.cfp;
+    int prev_line_start;
+    rb_control_frame_t *cfp = GET_THREAD()->cfp;
+	while (cfp->pc == 0 || cfp->iseq == 0)
+	    cfp++;
+
+    prev_line_start = find_prev_line_start(cfp);
+    if (prev_line_start < 0)
+        return(0);
 
     /* save the current catch table */
-    CTX_FL_SET(debug_context, CTX_FL_CATCHING);
     debug_context->catch_table.old_catch_table_size = cfp->iseq->catch_table_size;
     debug_context->catch_table.old_catch_table = cfp->iseq->catch_table;
     debug_context->catch_table.mod_name = mod_name;
@@ -733,8 +802,16 @@ catch_exception(debug_context_t *debug_context, VALUE mod_name)
 
     /* create a new catch table to catch this exception, and put it in the current iseq */
     cfp->iseq->catch_table_size = 1;
-    cfp->iseq->catch_table =
-        create_catch_table(debug_context, top_frame->info.runtime.last_pc - cfp->iseq->iseq_encoded - insn_len(BIN(trace)));
+    cfp->iseq->catch_table = create_catch_table(debug_context, 0);
+
+    /* hijack the currently running code so that we can change the frame PC */
+    debug_context->saved_jump_ins[0] = cfp->iseq->iseq_encoded[0];
+    debug_context->saved_jump_ins[1] = cfp->iseq->iseq_encoded[1];
+    cfp->iseq->iseq_encoded[0] = opt_call_c_function;
+    cfp->iseq->iseq_encoded[1] = (VALUE)do_catch;
+    debug_context->jump_pc = cfp->iseq->iseq_encoded + prev_line_start;
+    debug_context->jump_cfp = NULL;
+    return(1);
 }
 
 static int
@@ -887,13 +964,8 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
                 rb_control_frame_t *cfp = top_frame->info.runtime.cfp;
                 int hit_count;
 
-                thread->cfp->sp--;
                 set_frame_source(event, debug_context, self, file, line, mid);
 
-                /* restore the proper catch table */
-                cfp->iseq->catch_table_size = debug_context->catch_table.old_catch_table_size;
-                cfp->iseq->catch_table = debug_context->catch_table.old_catch_table;
-                
                 /* send catchpoint notification */
                 hit_count = INT2FIX(FIX2INT(rb_hash_aref(rdebug_catchpoints, 
                     debug_context->catch_table.mod_name)+1));
@@ -1069,7 +1141,8 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
             hit_count = rb_hash_aref(rdebug_catchpoints, mod_name);
             if (hit_count != Qnil)
             {
-                catch_exception(debug_context, mod_name);
+                if (!catch_exception(debug_context, mod_name))
+                    fprintf(stderr, "*** CATCH EXCEPTION FAILED\n");
                 break;
             }
         }
