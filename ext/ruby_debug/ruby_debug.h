@@ -78,6 +78,7 @@ typedef struct {
     rb_control_frame_t *jump_cfp;
     VALUE *jump_pc;
     iseq_catch_t *old_iseq_catch;
+    VALUE last_exception;
     volatile int thread_pause;
 } debug_context_t;
 

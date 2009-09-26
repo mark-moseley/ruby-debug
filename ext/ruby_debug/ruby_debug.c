@@ -394,6 +394,7 @@ debug_context_create(VALUE thread)
     debug_context->jump_pc = NULL;
     debug_context->jump_cfp = NULL;
     debug_context->old_iseq_catch = NULL;
+    debug_context->last_exception = Qnil;
     debug_context->thread_pause = 0;
     if(rb_obj_class(thread) == cDebugThread)
         CTX_FL_SET(debug_context, CTX_FL_IGNORE);
@@ -750,7 +751,6 @@ FUNC_FASTCALL(do_catch)(rb_thread_t *th, rb_control_frame_t *cfp)
 {
     VALUE context;
     debug_context_t *debug_context;
-    debug_frame_t *top_frame;
 
     thread_context_lookup(th->self, &context, &debug_context, 0);
     if (debug_context == NULL)
@@ -762,23 +762,13 @@ FUNC_FASTCALL(do_catch)(rb_thread_t *th, rb_control_frame_t *cfp)
     
     debug_context->jump_pc = NULL;
     debug_context->jump_cfp = NULL;
-    debug_context->last_line = 0;
-    debug_context->last_file = NULL;
-    debug_context->stop_next = 1;
 
-    top_frame = get_top_frame(debug_context);
-
-    if (top_frame != NULL)
-    {
-        rb_control_frame_t *frame_cfp = top_frame->info.runtime.cfp;
-
-        /* restore the proper catch table */
-        frame_cfp->iseq->catch_table_size = debug_context->catch_table.old_catch_table_size;
-        frame_cfp->iseq->catch_table = debug_context->catch_table.old_catch_table;
-    }
-
+    /* restore the proper catch table */
+    cfp->iseq->catch_table_size = debug_context->catch_table.old_catch_table_size;
+    cfp->iseq->catch_table = debug_context->catch_table.old_catch_table;
     CTX_FL_SET(debug_context, CTX_FL_CATCHING);
     th->cfp->sp--;
+
     return(cfp);
 }
 
@@ -957,26 +947,20 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     {
         if (CTX_FL_TEST(debug_context, CTX_FL_CATCHING))
         {
-            debug_frame_t *top_frame = get_top_frame(debug_context);
-            
-            if (top_frame != NULL)
-            {
-                rb_control_frame_t *cfp = top_frame->info.runtime.cfp;
-                int hit_count;
+            int hit_count;
 
-                set_frame_source(event, debug_context, self, file, line, mid);
+            set_frame_source(event, debug_context, self, file, line, mid);
 
-                /* send catchpoint notification */
-                hit_count = INT2FIX(FIX2INT(rb_hash_aref(rdebug_catchpoints, 
-                    debug_context->catch_table.mod_name)+1));
-                rb_hash_aset(rdebug_catchpoints, debug_context->catch_table.mod_name, hit_count);
-                debug_context->stop_reason = CTX_STOP_CATCHPOINT;
-                rb_funcall(context, idAtCatchpoint, 1, debug_context->catch_table.errinfo);
-                if(binding == Qnil)
-                    binding = create_binding(self);
-                save_top_binding(debug_context, binding);
-                call_at_line(context, debug_context, rb_str_new2(file), INT2FIX(line));
-            }
+            /* send catchpoint notification */
+            hit_count = INT2FIX(FIX2INT(rb_hash_aref(rdebug_catchpoints, 
+                debug_context->catch_table.mod_name)+1));
+            rb_hash_aset(rdebug_catchpoints, debug_context->catch_table.mod_name, hit_count);
+            debug_context->stop_reason = CTX_STOP_CATCHPOINT;
+            rb_funcall(context, idAtCatchpoint, 1, debug_context->catch_table.errinfo);
+            if(binding == Qnil)
+                binding = create_binding(self);
+            save_top_binding(debug_context, binding);
+            call_at_line(context, debug_context, rb_str_new2(file), INT2FIX(line));
 
             /* now allow the next exception to be caught */
             CTX_FL_UNSET(debug_context, CTX_FL_CATCHING);
@@ -1106,9 +1090,14 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         if (skip_next_exception == Qtrue)
         {
             skip_next_exception = Qfalse;
+            debug_context->last_exception = rb_errinfo();
             break;
         }
 
+        if (rb_errinfo() == debug_context->last_exception)
+            break;
+
+        debug_context->last_exception = Qnil;
         if(post_mortem == Qtrue && self)
         {
             binding = create_binding(self);
