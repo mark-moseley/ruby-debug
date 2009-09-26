@@ -1,0 +1,63 @@
+pm-catch2.rb:3
+def bar(arg)
+# # ***************************************************
+# # Test catch
+# # ***************************************************
+# set debuggertesting on
+Currently testing the debugger is on.
+# set autoeval off
+autoeval is off.
+# set basename on
+basename is on.
+# catch ZeroDivisionError
+Catch exception ZeroDivisionError.
+# c
+foo begin
+bar begin
+Catchpoint at pm-catch2.rb:5: `divided by 0' (ZeroDivisionError)
+	from tdebug.rb:252:in `<top (required)>'
+	from ../rdbg.rb:23:in `load'
+	from ../rdbg.rb:23:in `runner'
+	from ../rdbg.rb:32:in `<main>'
+pm-catch2.rb:5
+1/0 if arg
+# sk
+ok
+# break 27
+Breakpoint 1 file ./pm-catch2.rb, line 27
+# c
+rescue
+15
+Breakpoint 1 at pm-catch2.rb:27
+pm-catch2.rb:27
+puts "done"
+# jump -1
+pm-catch2.rb:26
+puts zero_div(10)
+# break 4
+Breakpoint 2 file ./pm-catch2.rb, line 4
+# c
+foo begin
+Breakpoint 2 at pm-catch2.rb:4
+pm-catch2.rb:4
+puts "bar begin"
+# p arg = 0
+0
+# c
+bar begin
+Catchpoint at pm-catch2.rb:5: `divided by 0' (ZeroDivisionError)
+	from tdebug.rb:252:in `<top (required)>'
+	from ../rdbg.rb:23:in `load'
+	from ../rdbg.rb:23:in `runner'
+	from ../rdbg.rb:32:in `<main>'
+pm-catch2.rb:5
+1/0 if arg
+# jump 7
+pm-catch2.rb:7
+puts "bar end"
+# del 1
+# c
+bar end
+foo end
+15
+done

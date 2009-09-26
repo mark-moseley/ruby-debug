@@ -754,7 +754,7 @@ FUNC_FASTCALL(do_catch)(rb_thread_t *th, rb_control_frame_t *cfp)
 
     thread_context_lookup(th->self, &context, &debug_context, 0);
     if (debug_context == NULL)
-        rb_raise(rb_eRuntimeError, "Lost context in jump");
+        rb_raise(rb_eRuntimeError, "Lost context in catch");
     cfp->pc[-2] = debug_context->saved_jump_ins[0];
     cfp->pc[-1] = debug_context->saved_jump_ins[1];
 

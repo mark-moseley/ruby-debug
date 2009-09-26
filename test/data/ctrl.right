@@ -3,9 +3,9 @@ width is 80.
 Type 'help <command-name>' for help on a specific command
 
 Available commands:
-break   edit  help       jump  pp    quit     save  source
-catch   eval  info       kill  ps    reload   set   thread
-delete  exit  interrupt  p     putl  restart  show
+break   edit  help       jump  pp    quit     save  skip  
+catch   eval  info       kill  ps    reload   set   source
+delete  exit  interrupt  p     putl  restart  show  thread
 
 Generic command for showing things about the program being debugged.
 -- 
