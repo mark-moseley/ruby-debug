@@ -3,7 +3,7 @@
 def bar(arg)
   puts "bar begin"
   1/0 if arg
-  ZeroDivisionError
+  raise ZeroDivisionError
   puts "bar end"
 end
 

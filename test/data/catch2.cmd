@@ -12,7 +12,7 @@ c
 jump -1
 break 4
 c
-p arg = 0
+p arg = nil
 c
 jump 7
 del 1

@@ -41,17 +41,17 @@ foo begin
 Breakpoint 2 at pm-catch2.rb:4
 pm-catch2.rb:4
 puts "bar begin"
-# p arg = 0
-0
+# p arg = nil
+nil
 # c
 bar begin
-Catchpoint at pm-catch2.rb:5: `divided by 0' (ZeroDivisionError)
+Catchpoint at pm-catch2.rb:6: `ZeroDivisionError' (ZeroDivisionError)
 	from tdebug.rb:252:in `<top (required)>'
 	from ../rdbg.rb:23:in `load'
 	from ../rdbg.rb:23:in `runner'
 	from ../rdbg.rb:32:in `<main>'
-pm-catch2.rb:5
-1/0 if arg
+pm-catch2.rb:6
+raise ZeroDivisionError
 # jump 7
 pm-catch2.rb:7
 puts "bar end"
