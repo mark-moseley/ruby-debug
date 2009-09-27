@@ -40,8 +40,6 @@ class TestRubyDebug < Test::Unit::TestCase
            'Debugger should now be started.')
     assert_equal(false, Debugger.debug,
                  'Debug variable should not be set.')
-    assert_equal(false, Debugger.post_mortem?,
-                 'Post mortem debugging should not be set.')
     a = Debugger.contexts
     assert_equal(1, a.size, 
                  'There should only be one context.')

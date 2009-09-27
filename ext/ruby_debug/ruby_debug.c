@@ -2231,6 +2231,25 @@ context_ignored(VALUE self)
 
 /*
  *   call-seq:
+ *      context.dead? -> bool
+ *
+ *   Returns +true+ if context doesn't represent a live context and is created
+ *   during post-mortem exception handling.
+ */
+static VALUE
+context_dead(VALUE self)
+{
+    debug_context_t *debug_context;
+
+    debug_check_started();
+
+    Data_Get_Struct(self, debug_context_t, debug_context);
+    return CTX_FL_TEST(debug_context, CTX_FL_DEAD) ? Qtrue : Qfalse;
+}
+
+
+/*
+ *   call-seq:
  *      context.stop_reason -> sym
  *   
  *   Returns the reason for the stop. It maybe of the following values:
@@ -2468,6 +2487,7 @@ Init_context()
     rb_define_method(cContext, "frame_method", context_frame_id, -1);
     rb_define_method(cContext, "frame_self", context_frame_self, -1);
     rb_define_method(cContext, "stack_size", context_stack_size, 0);
+    rb_define_method(cContext, "dead?", context_dead, 0);
     rb_define_method(cContext, "breakpoint", 
              context_breakpoint, 0);      /* in breakpoint.c */
     rb_define_method(cContext, "set_breakpoint", 
