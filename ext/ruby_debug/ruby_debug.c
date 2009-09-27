@@ -33,7 +33,6 @@ typedef struct {
 
 static VALUE tracing            = Qfalse;
 static VALUE locker             = Qnil;
-static VALUE post_mortem        = Qfalse;
 static VALUE keep_frame_binding = Qfalse;
 static VALUE debug              = Qfalse;
 static VALUE catchall           = Qtrue;
@@ -72,10 +71,9 @@ static VALUE create_binding(VALUE);
 static VALUE debug_stop(VALUE);
 static void save_current_position(debug_context_t *);
 static VALUE context_copy_args(debug_frame_t *);
-static VALUE context_copy_locals(debug_context_t *,debug_frame_t *, VALUE);
+static VALUE context_copy_locals(debug_context_t *, debug_frame_t *, VALUE);
 static void context_suspend_0(debug_context_t *);
 static void context_resume_0(debug_context_t *);
-static void copy_scalar_args(debug_frame_t *);
 
 typedef struct locked_thread_t {
     VALUE thread_id;
@@ -353,11 +351,6 @@ debug_context_mark(void *data)
         rb_gc_mark(frame->binding);
         rb_gc_mark(frame->self);
         rb_gc_mark(frame->arg_ary);
-        if(frame->dead)
-        {
-            rb_gc_mark(frame->info.copy.locals);
-            rb_gc_mark(frame->info.copy.args);
-        }
     }
     rb_gc_mark(debug_context->breakpoint);
 }
@@ -399,35 +392,6 @@ debug_context_create(VALUE thread)
     if(rb_obj_class(thread) == cDebugThread)
         CTX_FL_SET(debug_context, CTX_FL_IGNORE);
     return Data_Wrap_Struct(cContext, debug_context_mark, debug_context_free, debug_context);
-}
-
-static VALUE
-debug_context_dup(debug_context_t *debug_context, VALUE self)
-{
-    debug_context_t *new_debug_context;
-    debug_frame_t *new_frame, *old_frame;
-    int i;
-
-    new_debug_context = ALLOC(debug_context_t);
-    memcpy(new_debug_context, debug_context, sizeof(debug_context_t));
-    new_debug_context->stop_next = -1;
-    new_debug_context->dest_frame = -1;
-    new_debug_context->stop_line = -1;
-    new_debug_context->stop_frame = -1;
-    new_debug_context->breakpoint = Qnil;
-    CTX_FL_SET(new_debug_context, CTX_FL_DEAD);
-    new_debug_context->frames = ALLOC_N(debug_frame_t, debug_context->stack_size);
-    new_debug_context->stack_len = debug_context->stack_size;
-    memcpy(new_debug_context->frames, debug_context->frames, sizeof(debug_frame_t) * debug_context->stack_size);
-    for(i = 0; i < debug_context->stack_size; i++)
-    {
-        new_frame = &(new_debug_context->frames[i]);
-        old_frame = &(debug_context->frames[i]);
-        new_frame->dead = 1;
-        new_frame->info.copy.args = context_copy_args(old_frame);
-        new_frame->info.copy.locals = context_copy_locals(debug_context, old_frame, self);
-    }
-    return Data_Wrap_Struct(cContext, debug_context_mark, debug_context_free, new_debug_context);
 }
 
 static void
@@ -529,7 +493,6 @@ save_call_frame(rb_event_flag_t event, debug_context_t *debug_context, VALUE sel
     debug_frame->binding = binding;
     debug_frame->id = mid;
     debug_frame->orig_id = mid;
-    debug_frame->dead = 0;
     debug_frame->self = self;
     debug_frame->arg_ary = Qnil;
     debug_frame->argc = GET_THREAD()->cfp->iseq->argc;
@@ -538,8 +501,6 @@ save_call_frame(rb_event_flag_t event, debug_context_t *debug_context, VALUE sel
     debug_frame->info.runtime.block_iseq = GET_THREAD()->cfp->block_iseq;
     debug_frame->info.runtime.block_pc = NULL;
     debug_frame->info.runtime.last_pc = last_pc;
-    if (RTEST(track_frame_args))
-        copy_scalar_args(debug_frame);
 }
 
 
@@ -729,7 +690,7 @@ find_prev_line_start(rb_control_frame_t *cfp)
         if (cfp->iseq->insn_info_table[i].position != pos)
             continue;
 
-        if (i == 0) return(0); // ???
+        if (i == 0) return(0); // TODO
 
         pos = -1;
         line_no = cfp->iseq->insn_info_table[--i].line_no;
@@ -966,11 +927,12 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
             CTX_FL_UNSET(debug_context, CTX_FL_CATCHING);
             break;
         }
-        
+
         if(debug_context->stack_size == 0)
             save_call_frame(event, debug_context, self, file, line, mid);
         else
             set_frame_source(event, debug_context, self, file, line, mid);
+        
         if(RTEST(tracing) || CTX_FL_TEST(debug_context, CTX_FL_TRACING))
             rb_funcall(context, idAtTracing, 2, rb_str_new2(file), INT2FIX(line));
 
@@ -997,7 +959,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
             (breakpoint = check_breakpoints_by_pos(debug_context, file, line)) != Qnil)
         {
             call_at_line_check(self, debug_context, breakpoint, context, file, line);
-        } 
+        }
         break;
     }
     case RUBY_EVENT_CALL:
@@ -1098,14 +1060,6 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
             break;
 
         debug_context->last_exception = Qnil;
-        if(post_mortem == Qtrue && self)
-        {
-            binding = create_binding(self);
-            rb_ivar_set(rb_errinfo(), rb_intern("@__debug_file"), rb_str_new2(file));
-            rb_ivar_set(rb_errinfo(), rb_intern("@__debug_line"), INT2FIX(line));
-            rb_ivar_set(rb_errinfo(), rb_intern("@__debug_binding"), binding);
-            rb_ivar_set(rb_errinfo(), rb_intern("@__debug_context"), debug_context_dup(debug_context, self));
-        }
 
         if (rdebug_catchpoints == Qnil ||
             (debug_context->stack_size == 0) ||
@@ -1449,34 +1403,6 @@ static VALUE
 debug_set_tracing(VALUE self, VALUE value)
 {
     tracing = RTEST(value) ? Qtrue : Qfalse;
-    return value;
-}
-
-/*
- *   call-seq:
- *      Debugger.post_mortem? -> bool
- *
- *   Returns +true+ if post-moterm debugging is enabled.
- */
-static VALUE
-debug_post_mortem(VALUE self)
-{
-    return post_mortem;
-}
-
-/*
- *   call-seq:
- *      Debugger.post_mortem = bool
- *
- *   Sets post-moterm flag.
- *   FOR INTERNAL USE ONLY.
- */
-static VALUE
-debug_set_post_mortem(VALUE self, VALUE value)
-{
-    debug_check_started();
-
-    post_mortem = RTEST(value) ? Qtrue : Qfalse;
     return value;
 }
 
@@ -1941,38 +1867,6 @@ arg_value_is_small(VALUE val)
 }
 
 /*
- *   Save scalar arguments or a class name.
- */
-static void
-copy_scalar_args(debug_frame_t *debug_frame)
-{
-    rb_control_frame_t *cfp;
-    rb_iseq_t *iseq;
-
-    cfp = debug_frame->info.runtime.cfp;
-    iseq = cfp->iseq;
-
-    if (iseq->local_table && iseq->argc)
-    {
-        int i;
-        VALUE val;
-
-        debug_frame->arg_ary = rb_ary_new2(iseq->argc);
-        for (i = 0; i < iseq->argc; i++)
-        {
-            if (!rb_is_local_id(iseq->local_table[i])) continue; /* skip flip states */
-
-            val = *(cfp->dfp - iseq->local_size + i);
-
-            if (arg_value_is_small(val))
-                rb_ary_push(debug_frame->arg_ary, val);
-            else
-                rb_ary_push(debug_frame->arg_ary, rb_str_new2(rb_obj_classname(val)));
-        }
-    }
-}
-
-/*
  *   call-seq:
  *      context.copy_args(frame) -> list of args
  *
@@ -2031,6 +1925,7 @@ context_copy_locals(debug_context_t *debug_context, debug_frame_t *debug_frame, 
     if ((iseq != NULL) && (iseq->local_table != NULL) && (iseq != cfp->iseq))
     {
         rb_thread_t *th;
+
         rb_control_frame_t *block_frame = RUBY_VM_NEXT_CONTROL_FRAME(cfp);
         GetThreadPtr(context_thread_0(debug_context), th);
         while (block_frame > (rb_control_frame_t*)th->stack)
@@ -2070,10 +1965,7 @@ context_frame_locals(int argc, VALUE *argv, VALUE self)
     Data_Get_Struct(self, debug_context_t, debug_context);
 
     debug_frame = GET_FRAME;
-    if (debug_frame->dead)
-        return debug_frame->info.copy.locals;
-    else
-        return context_copy_locals(debug_context, debug_frame, self);
+    return context_copy_locals(debug_context, debug_frame, self);
 }
 
 /*
@@ -2094,10 +1986,7 @@ context_frame_args(int argc, VALUE *argv, VALUE self)
     Data_Get_Struct(self, debug_context_t, debug_context);
 
     debug_frame = GET_FRAME;
-    if (debug_frame->dead)
-        return debug_frame->info.copy.args;
-    else
-        return context_copy_args(debug_frame);
+    return context_copy_args(debug_frame);
 }
 
 /*
@@ -2342,24 +2231,6 @@ context_ignored(VALUE self)
 
 /*
  *   call-seq:
- *      context.dead? -> bool
- *
- *   Returns +true+ if context doesn't represent a live context and is created
- *   during post-mortem exception handling.
- */
-static VALUE
-context_dead(VALUE self)
-{
-    debug_context_t *debug_context;
-
-    debug_check_started();
-
-    Data_Get_Struct(self, debug_context_t, debug_context);
-    return CTX_FL_TEST(debug_context, CTX_FL_DEAD) ? Qtrue : Qfalse;
-}
-
-/*
- *   call-seq:
  *      context.stop_reason -> sym
  *   
  *   Returns the reason for the stop. It maybe of the following values:
@@ -2561,6 +2432,7 @@ context_pause(VALUE self)
     return(Qtrue);
 }
 
+
 /*
  *   Document-class: Context
  *
@@ -2596,7 +2468,6 @@ Init_context()
     rb_define_method(cContext, "frame_method", context_frame_id, -1);
     rb_define_method(cContext, "frame_self", context_frame_self, -1);
     rb_define_method(cContext, "stack_size", context_stack_size, 0);
-    rb_define_method(cContext, "dead?", context_dead, 0);
     rb_define_method(cContext, "breakpoint", 
              context_breakpoint, 0);      /* in breakpoint.c */
     rb_define_method(cContext, "set_breakpoint", 
@@ -2690,8 +2561,6 @@ Init_ruby_debug()
     rb_define_module_function(mDebugger, "debug_load", debug_debug_load, -1);
     rb_define_module_function(mDebugger, "skip", debug_skip, 0);
     rb_define_module_function(mDebugger, "debug_at_exit", debug_at_exit, 0);
-    rb_define_module_function(mDebugger, "post_mortem?", debug_post_mortem, 0);
-    rb_define_module_function(mDebugger, "post_mortem=", debug_set_post_mortem, 1);
     rb_define_module_function(mDebugger, "keep_frame_binding?", 
                   debug_keep_frame_binding, 0);
     rb_define_module_function(mDebugger, "keep_frame_binding=", 

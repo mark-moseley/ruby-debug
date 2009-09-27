@@ -39,7 +39,6 @@ typedef struct {
     ID orig_id;
     int line;
     const char * file;
-    short dead;
     VALUE self;
     VALUE arg_ary;
     union {
@@ -50,11 +49,6 @@ typedef struct {
 			VALUE *block_pc;
             VALUE *last_pc;
         } runtime;
-        struct {
-            VALUE args;
-            VALUE locals;
-	        VALUE arg_ary;
-        } copy;
     } info;
 } debug_frame_t;
 
