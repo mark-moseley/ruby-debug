@@ -74,6 +74,15 @@ typedef struct {
     iseq_catch_t *old_iseq_catch;
     VALUE last_exception;
     volatile int thread_pause;
+//
+    rb_control_frame_t *cur_cfp;
+    int in_at_line;
+//
+    struct RData catch_rdata;
+    struct rb_iseq_struct catch_iseq;
+    struct iseq_insn_info_entry catch_info_entry[2];
+    struct RNode catch_cref_stack;
+    VALUE iseq_insn[2];
 } debug_context_t;
 
 /* variables in ruby_debug.c */

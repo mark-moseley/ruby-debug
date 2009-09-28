@@ -46,7 +46,9 @@ static debug_context_t *last_debug_context = NULL;
 VALUE rdebug_threads_tbl = Qnil; /* Context for each of the threads */
 VALUE mDebugger;                 /* Ruby Debugger Module object */
 
-static VALUE opt_call_c_function;
+static VALUE bin_opt_call_c_function;
+static VALUE bin_putnil;
+static VALUE bin_leave;
 static VALUE cThreadsTable;
 static VALUE cContext;
 static VALUE cDebugThread;
@@ -74,6 +76,7 @@ static VALUE context_copy_args(debug_frame_t *);
 static VALUE context_copy_locals(debug_context_t *, debug_frame_t *, VALUE);
 static void context_suspend_0(debug_context_t *);
 static void context_resume_0(debug_context_t *);
+static void thread_context_lookup(VALUE, VALUE *, debug_context_t **, int);
 
 typedef struct locked_thread_t {
     VALUE thread_id;
@@ -326,6 +329,84 @@ check_thread_contexts()
     st_foreach(threads_table->tbl, threads_table_check_i, 0);
 }
 
+static rb_control_frame_t *
+FUNC_FASTCALL(do_catchall)(rb_thread_t *th, rb_control_frame_t *cfp)
+{
+    VALUE context;
+    debug_context_t *debug_context;
+
+    thread_context_lookup(th->self, &context, &debug_context, 0);
+    if (debug_context == NULL)
+        rb_raise(rb_eRuntimeError, "Lost context in catchall");
+
+    return(cfp);
+}
+
+static void
+create_exception_catchall(debug_context_t *debug_context)
+{
+    rb_iseq_t *iseq;
+    struct iseq_catch_table_entry *entry;
+    rb_control_frame_t *cfp = GET_THREAD()->cfp;
+    while (cfp->iseq == NULL)
+        cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
+
+    iseq = cfp->iseq;
+    iseq->catch_table_size++;
+    entry = ALLOC_N(struct iseq_catch_table_entry, iseq->catch_table_size);
+
+    if (iseq->catch_table_size > 1)
+    {
+        MEMCPY(entry, iseq->catch_table, struct iseq_catch_table_entry, iseq->catch_table_size-1);
+        xfree(iseq->catch_table);
+        iseq->catch_table = entry;
+        entry += iseq->catch_table_size-1;
+    }
+    else
+        iseq->catch_table = entry;
+
+    memset(&debug_context->catch_iseq, 0, sizeof(struct rb_iseq_struct));
+    memset(&debug_context->catch_cref_stack, 0, sizeof(struct RNode));
+    debug_context->catch_rdata.basic.flags = 12; // ???
+    debug_context->catch_rdata.basic.klass = 0; // FIXME
+    debug_context->catch_rdata.dmark = NULL;
+    debug_context->catch_rdata.dfree = NULL;
+    debug_context->catch_rdata.data = &debug_context->catch_iseq;
+    debug_context->catch_iseq.type = ISEQ_TYPE_METHOD;
+    debug_context->catch_iseq.name = rb_str_new_cstr("(exception catcher)");
+    debug_context->catch_iseq.filename = rb_str_new_cstr("(exception catcher)");
+    debug_context->catch_iseq.iseq = debug_context->iseq_insn;
+    debug_context->catch_iseq.iseq[0] = bin_opt_call_c_function;
+    debug_context->catch_iseq.iseq[1] = (VALUE)do_catchall;
+    debug_context->catch_iseq.iseq_encoded = debug_context->iseq_insn;
+    debug_context->catch_iseq.iseq_size = 2;
+    debug_context->catch_iseq.mark_ary = rb_ary_new();
+    debug_context->catch_iseq.insn_info_table = (struct iseq_insn_info_entry*)&debug_context->catch_info_entry;
+    debug_context->catch_iseq.insn_info_size = 1;
+    debug_context->catch_iseq.local_size = 1;
+    debug_context->catch_iseq.arg_simple = 1;
+    debug_context->catch_iseq.arg_rest = -1;
+    debug_context->catch_iseq.arg_block = -1;
+    debug_context->catch_iseq.stack_max = 1;
+    debug_context->catch_iseq.local_iseq = &debug_context->catch_iseq;
+    debug_context->catch_iseq.self = (VALUE)&debug_context->catch_rdata;
+    debug_context->catch_iseq.cref_stack = &debug_context->catch_cref_stack;
+    debug_context->catch_info_entry[0].position = 0;
+    debug_context->catch_info_entry[0].line_no = 1;
+    debug_context->catch_info_entry[0].sp = 0;
+//    debug_context->catch_info_entry[1].position = 1;
+//    debug_context->catch_info_entry[1].line_no = 0;
+//    debug_context->catch_info_entry[1].sp = 1;
+    debug_context->catch_cref_stack.flags = 1052; // ???
+
+    entry->type = CATCH_TYPE_RESCUE;
+    entry->iseq = debug_context->catch_iseq.self;
+    entry->start = 0;
+    entry->end = ULONG_MAX;
+    entry->cont = 0;
+    entry->sp = 0;
+}
+
 /*
  *   call-seq:
  *      Debugger.started? -> bool
@@ -389,10 +470,13 @@ debug_context_create(VALUE thread)
     debug_context->old_iseq_catch = NULL;
     debug_context->last_exception = Qnil;
     debug_context->thread_pause = 0;
+    debug_context->in_at_line = 0;
+    debug_context->catch_iseq.type = 0;
     if(rb_obj_class(thread) == cDebugThread)
         CTX_FL_SET(debug_context, CTX_FL_IGNORE);
     return Data_Wrap_Struct(cContext, debug_context_mark, debug_context_free, debug_context);
 }
+
 
 static void
 thread_context_lookup(VALUE thread, VALUE *context, debug_context_t **debug_context, int create)
@@ -429,7 +513,7 @@ thread_context_lookup(VALUE thread, VALUE *context, debug_context_t **debug_cont
     }
 
     Data_Get_Struct(*context, debug_context_t, l_debug_context);
-    if(debug_context)
+    if (debug_context)
         *debug_context = l_debug_context;
 
     last_thread = thread;
@@ -449,12 +533,16 @@ static VALUE
 call_at_line(VALUE context, debug_context_t *debug_context, VALUE file, VALUE line)
 {
     VALUE args;
+    VALUE ret;
     
     last_debugged_thnum = debug_context->thnum;
     save_current_position(debug_context);
 
     args = rb_ary_new3(3, context, file, line);
-    return rb_protect(call_at_line_unprotected, args, 0);
+    debug_context->in_at_line = 1;
+    ret = rb_protect(call_at_line_unprotected, args, 0);
+    debug_context->in_at_line = 0;
+    return(ret);
 }
 
 inline static debug_frame_t *
@@ -758,7 +846,7 @@ catch_exception(debug_context_t *debug_context, VALUE mod_name)
     /* hijack the currently running code so that we can change the frame PC */
     debug_context->saved_jump_ins[0] = cfp->iseq->iseq_encoded[0];
     debug_context->saved_jump_ins[1] = cfp->iseq->iseq_encoded[1];
-    cfp->iseq->iseq_encoded[0] = opt_call_c_function;
+    cfp->iseq->iseq_encoded[0] = bin_opt_call_c_function;
     cfp->iseq->iseq_encoded[1] = (VALUE)do_catch;
     debug_context->jump_pc = cfp->iseq->iseq_encoded + prev_line_start;
     debug_context->jump_cfp = NULL;
@@ -794,6 +882,11 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         return;
     thread_context_lookup(thread->self, &context, &debug_context, 1);
 
+    if (debug_context->catch_iseq.type == 0)
+        create_exception_catchall(debug_context);
+    if (debug_context->in_at_line) return;
+
+    debug_context->cur_cfp = thread->cfp;
     if ((event == RUBY_EVENT_LINE) || (event == RUBY_EVENT_CALL))
     {
         mid = iseq->defined_method_id;
@@ -883,7 +976,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         {
             /* Sometimes duplicate RUBY_EVENT_LINE messages get generated by the compiler.
              * Ignore them. */
-            goto cleanup;
+            //goto cleanup;
         }
     }
 
@@ -1135,50 +1228,14 @@ debug_stop_i(VALUE self)
  *      Debugger.start_ -> bool
  *      Debugger.start_ { ... } -> bool
  *
- *   This method is internal and activates the debugger. Use
- *   Debugger.start (from <tt>lib/ruby-debug-base.rb</tt>) instead.
+ *   Deprecated.
  *
- *   The return value is the value of !Debugger.started? <i>before</i>
- *   issuing the +start+; That is, +true+ is returned, unless debugger
- *   was previously started.
-
- *   If a block is given, it starts debugger and yields to block. When
- *   the block is finished executing it stops the debugger with
- *   Debugger.stop method. Inside the block you will probably want to
- *   have a call to Debugger.debugger. For example:
- *     Debugger.start{debugger; foo}  # Stop inside of foo
- * 
- *   Also, ruby-debug only allows
- *   one invocation of debugger at a time; nested Debugger.start's
- *   have no effect and you can't use this inside the debugger itself.
- *
- *   <i>Note that if you want to completely remove the debugger hook,
- *   you must call Debugger.stop as many times as you called
- *   Debugger.start method.</i>
  */
 static VALUE
 debug_start(VALUE self)
 {
-    VALUE result;
     start_count++;
-
-    if(IS_STARTED)
-        result = Qfalse;
-    else
-    {
-        locker             = Qnil;
-        rdebug_breakpoints = rb_ary_new();
-        rdebug_catchpoints = rb_hash_new();
-        rdebug_threads_tbl = threads_table_create();
-
-        rb_add_event_hook(debug_event_hook, RUBY_EVENT_ALL, Qnil);
-        result = Qtrue;
-    }
-
-    if(rb_block_given_p()) 
-      rb_ensure(rb_yield, self, debug_stop_i, self);
-
-    return result;
+    return Qtrue;
 }
 
 /*
@@ -1525,6 +1582,12 @@ debug_debug_load(int argc, VALUE *argv, VALUE self)
         increment_start = Qtrue;
     }
 
+    locker             = Qnil;
+    rdebug_breakpoints = rb_ary_new();
+    rdebug_catchpoints = rb_hash_new();
+    rdebug_threads_tbl = threads_table_create();
+    rb_add_event_hook(debug_event_hook, RUBY_EVENT_ALL, Qnil);
+
     debug_start(self);
     if (Qfalse == increment_start) start_count--;
     
@@ -1536,6 +1599,7 @@ debug_debug_load(int argc, VALUE *argv, VALUE self)
     /* Initializing $0 to the script's path */
     ruby_script(RSTRING_PTR(file));
     rb_load_protect(file, 0, &state);
+    rb_load(file, 0);
     if (0 != state) 
     {
         VALUE errinfo = rb_errinfo();
@@ -2247,7 +2311,6 @@ context_dead(VALUE self)
     return CTX_FL_TEST(debug_context, CTX_FL_DEAD) ? Qtrue : Qfalse;
 }
 
-
 /*
  *   call-seq:
  *      context.stop_reason -> sym
@@ -2408,7 +2471,7 @@ context_jump(VALUE self, VALUE line, VALUE file)
                 /* hijack the currently running code so that we can change the frame PC */
                 debug_context->saved_jump_ins[0] = cfp_start->pc[0];
                 debug_context->saved_jump_ins[1] = cfp_start->pc[1];
-                cfp_start->pc[0] = opt_call_c_function;
+                cfp_start->pc[0] = bin_opt_call_c_function;
                 cfp_start->pc[1] = (VALUE)do_jump;
 
                 debug_context->jump_cfp = cfp;
@@ -2532,6 +2595,24 @@ debug_add_breakpoint(int argc, VALUE *argv, VALUE self)
     return result;
 }
 
+VALUE translate_insns(VALUE bin)
+{
+    rb_iseq_t iseq;
+    iseq.iseq = &bin;
+    iseq.iseq_size = 1;
+    iseq.iseq_encoded = NULL;
+
+    rb_iseq_translate_threaded_code(&iseq);
+    if (iseq.iseq_encoded != iseq.iseq)
+    {
+        bin = iseq.iseq_encoded[0];
+        xfree(iseq.iseq_encoded);
+    }
+    return(bin);
+}
+
+#define TRANSLATE_INSNS(op) bin_##op = translate_insns(BIN(op))
+
 /*
  *   Document-class: Debugger
  *
@@ -2543,18 +2624,9 @@ debug_add_breakpoint(int argc, VALUE *argv, VALUE self)
 void
 Init_ruby_debug()
 {
-    rb_iseq_t iseq;
-    iseq.iseq = &opt_call_c_function;
-    iseq.iseq_size = 1;
-    iseq.iseq_encoded = NULL;
-
-    opt_call_c_function = (VALUE)BIN(opt_call_c_function);
-    rb_iseq_translate_threaded_code(&iseq);
-    if (iseq.iseq_encoded != iseq.iseq)
-    {
-        opt_call_c_function = iseq.iseq_encoded[0];
-        xfree(iseq.iseq_encoded);
-    }
+    TRANSLATE_INSNS(opt_call_c_function);
+    TRANSLATE_INSNS(putnil);
+    TRANSLATE_INSNS(leave);
 
     mDebugger = rb_define_module("Debugger");
     rb_define_const(mDebugger, "VERSION", rb_str_new2(DEBUG_VERSION));
