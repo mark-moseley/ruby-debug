@@ -34,7 +34,6 @@ typedef struct {
 
 typedef struct {
     int argc;         /* Number of arguments a frame should have. */
-    VALUE binding;
     ID id;
     ID orig_id;
     int line;
@@ -75,6 +74,7 @@ typedef struct {
     VALUE last_exception;
     volatile int thread_pause;
 //
+    rb_control_frame_t *start_cfp;
     rb_control_frame_t *cur_cfp;
     int in_at_line;
 //
@@ -82,7 +82,10 @@ typedef struct {
     struct rb_iseq_struct catch_iseq;
     struct iseq_insn_info_entry catch_info_entry[2];
     struct RNode catch_cref_stack;
-    VALUE iseq_insn[2];
+    VALUE iseq_insn[4];
+//
+    rb_control_frame_t **cfp;
+    int cfp_count;
 } debug_context_t;
 
 /* variables in ruby_debug.c */
