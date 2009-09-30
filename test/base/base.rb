@@ -9,9 +9,6 @@ class TestRubyDebug < Test::Unit::TestCase
 
   # test current_context
   def test_current_context
-    assert_equal(false, Debugger.started?, 
-                 'debugger should not initially be started.')
-    Debugger.start_
     assert(Debugger.started?, 
            'debugger should now be started.')
     assert_equal(__LINE__, Debugger.current_context.frame_line)
@@ -23,19 +20,13 @@ class TestRubyDebug < Test::Unit::TestCase
                  File.basename(Debugger.current_context.frame_file))
     assert_raises(ArgumentError) {Debugger.current_context.frame_file(1, 2)}
     assert_raises(ArgumentError) {Debugger.current_context.frame_file(10)}
-    assert_equal(3, Debugger.current_context.stack_size)
+    assert_equal(6, Debugger.current_context.stack_size)
     assert_equal(TestRubyDebug, Debugger.current_context.frame_class)
     assert_equal(false, Debugger.current_context.dead?, 'Not dead yet!')
-    Debugger.stop
-    assert_equal(false, Debugger.started?, 
-                 'Debugger should no longer be started.')
   end
 
   # Test initial variables and setting/getting state.
   def test_debugger_base
-    assert_equal(false, Debugger.started?, 
-                 'Debugger should not initially be started.')
-    Debugger.start_
     assert(Debugger.started?, 
            'Debugger should now be started.')
     assert_equal(false, Debugger.debug,
@@ -45,14 +36,10 @@ class TestRubyDebug < Test::Unit::TestCase
                  'There should only be one context.')
     assert_equal(Array, a.class, 
                  'Context should be an array.')
-    Debugger.stop
-    assert_equal(false, Debugger.started?, 
-                 'debugger should no longer be started.')
   end
 
   # Test breakpoint handling
   def test_breakpoints
-    Debugger.start_
     assert_equal(0, Debugger.breakpoints.size,
                  'There should not be any breakpoints set.')
     brk = Debugger.add_breakpoint(__FILE__, 1)
@@ -66,7 +53,6 @@ class TestRubyDebug < Test::Unit::TestCase
     Debugger.remove_breakpoint(1)
     assert_equal(0, Debugger.breakpoints.size,
                  'There should no longer be any breakpoints set.')
-    Debugger.stop
   end
 end
 

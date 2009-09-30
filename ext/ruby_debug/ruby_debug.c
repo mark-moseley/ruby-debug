@@ -1940,6 +1940,68 @@ context_stack_size(VALUE self)
 
 /*
  *   call-seq:
+ *      context.stack_inc-> bool
+ *
+ *   Increments the top of the call stack to the previous valid frame, if possible.
+ */
+static VALUE
+context_stack_inc(VALUE self)
+{
+    debug_context_t *debug_context;
+    rb_control_frame_t *cfp;
+    rb_thread_t *th;
+
+    Data_Get_Struct(self, debug_context_t, debug_context);
+    GetThreadPtr(context_thread_0(debug_context), th);
+    cfp = debug_context->start_cfp;
+
+    while (cfp < RUBY_VM_END_CONTROL_FRAME(th))
+    {
+        cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
+        if (cfp->iseq != NULL && cfp->pc != NULL)
+        {
+            debug_context->start_cfp = cfp;
+            if (GET_THREAD() == th)
+                set_cfp(debug_context);
+            return(Qtrue);
+        }
+    }
+    return(Qfalse);
+}
+
+/*
+ *   call-seq:
+ *      context.stack_dec-> bool
+ *
+ *   Decrements the top of the call stack to the next valid frame, if possible.
+ */
+static VALUE
+context_stack_dec(VALUE self)
+{
+    debug_context_t *debug_context;
+    rb_control_frame_t *cfp;
+    rb_thread_t *th;
+
+    Data_Get_Struct(self, debug_context_t, debug_context);
+    GetThreadPtr(context_thread_0(debug_context), th);
+    cfp = debug_context->start_cfp;
+
+    while (cfp >= debug_context->cur_cfp)
+    {
+        cfp = RUBY_VM_NEXT_CONTROL_FRAME(cfp);
+        if (cfp->iseq != NULL && cfp->pc != NULL)
+        {
+            debug_context->start_cfp = cfp;
+            if (GET_THREAD() == th)
+                set_cfp(debug_context);
+            return(Qtrue);
+        }
+    }
+    return(Qfalse);
+}
+
+/*
+ *   call-seq:
  *      context.thread -> thread
  *
  *   Returns a thread this context is associated with.
@@ -2328,6 +2390,8 @@ Init_context()
     rb_define_method(cContext, "frame_method", context_frame_id, -1);
     rb_define_method(cContext, "frame_self", context_frame_self, -1);
     rb_define_method(cContext, "stack_size", context_stack_size, 0);
+    rb_define_method(cContext, "stack_inc", context_stack_inc, 0);
+    rb_define_method(cContext, "stack_dec", context_stack_dec, 0);
     rb_define_method(cContext, "dead?", context_dead, 0);
     rb_define_method(cContext, "breakpoint", 
              context_breakpoint, 0);      /* in breakpoint.c */
