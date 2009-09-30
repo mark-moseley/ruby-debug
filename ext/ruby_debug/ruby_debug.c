@@ -75,6 +75,7 @@ static void context_suspend_0(debug_context_t *);
 static void context_resume_0(debug_context_t *);
 static void thread_context_lookup(VALUE, VALUE *, debug_context_t **, int);
 static VALUE debug_current_context(VALUE self);
+static int find_prev_line_start(rb_control_frame_t *cfp);
 
 
 typedef struct locked_thread_t {
@@ -331,6 +332,7 @@ check_thread_contexts()
 static rb_control_frame_t *
 FUNC_FASTCALL(do_catchall)(rb_thread_t *th, rb_control_frame_t *cfp)
 {
+    int size;
     VALUE context;
     debug_context_t *debug_context;
 
@@ -338,7 +340,17 @@ FUNC_FASTCALL(do_catchall)(rb_thread_t *th, rb_control_frame_t *cfp)
     if (debug_context == NULL)
         rb_raise(rb_eRuntimeError, "Lost context in catchall");
 
-    return(cfp);
+    size = sizeof(rb_control_frame_t) *
+        ((debug_context->cfp[debug_context->cfp_count-1] - debug_context->cfp[0]) + 1);
+    memcpy(debug_context->cfp[0], debug_context->frames, size);
+
+    free(debug_context->frames);
+    debug_context->frames = NULL;
+
+    CTX_FL_SET(debug_context, CTX_FL_CATCHING);
+    th->cfp = debug_context->cfp[0];
+    th->cfp->pc = th->cfp->iseq->iseq_encoded + find_prev_line_start(th->cfp);
+    return(th->cfp);
 }
 
 static void
@@ -351,7 +363,6 @@ create_exception_catchall(debug_context_t *debug_context)
         cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
 
     debug_context->start_cfp = cfp;
-    return;
 
     iseq = cfp->iseq;
     iseq->catch_table_size++;
@@ -390,7 +401,7 @@ create_exception_catchall(debug_context_t *debug_context)
     }
     debug_context->catch_iseq.iseq_size = 2;
     debug_context->catch_iseq.mark_ary = rb_ary_new();
-    debug_context->catch_iseq.insn_info_table = (struct iseq_insn_info_entry*)&debug_context->catch_info_entry;
+    debug_context->catch_iseq.insn_info_table = &debug_context->catch_info_entry;
     debug_context->catch_iseq.insn_info_size = 1;
     debug_context->catch_iseq.local_size = 1;
     debug_context->catch_iseq.arg_simple = 1;
@@ -400,13 +411,10 @@ create_exception_catchall(debug_context_t *debug_context)
     debug_context->catch_iseq.local_iseq = &debug_context->catch_iseq;
     debug_context->catch_iseq.self = (VALUE)&debug_context->catch_rdata;
     debug_context->catch_iseq.cref_stack = &debug_context->catch_cref_stack;
-    debug_context->catch_info_entry[0].position = 0;
-    debug_context->catch_info_entry[0].line_no = 1;
-    debug_context->catch_info_entry[0].sp = 0;
-//    debug_context->catch_info_entry[1].position = 1;
-//    debug_context->catch_info_entry[1].line_no = 0;
-//    debug_context->catch_info_entry[1].sp = 1;
-    debug_context->catch_cref_stack.flags = 1052; // ???
+    debug_context->catch_info_entry.position = 0;
+    debug_context->catch_info_entry.line_no = 1;
+    debug_context->catch_info_entry.sp = 0;
+    debug_context->catch_cref_stack.flags = 1052;
 
     entry->type = CATCH_TYPE_RESCUE;
     entry->iseq = debug_context->catch_iseq.self;
@@ -472,6 +480,8 @@ debug_context_create(VALUE thread)
     debug_context->start_cfp = NULL;
     debug_context->cur_cfp = NULL;
     debug_context->top_cfp = NULL;
+    debug_context->catch_cfp = NULL;
+    debug_context->frames = NULL;
     debug_context->cfp = NULL;
     if(rb_obj_class(thread) == cDebugThread)
         CTX_FL_SET(debug_context, CTX_FL_IGNORE);
@@ -772,12 +782,6 @@ catch_exception(debug_context_t *debug_context, VALUE mod_name)
     return(1);
 }
 
-static int
-exception_caught(debug_context_t *debug_context)
-{
-    return(1);
-}
-
 static void
 set_cfp(debug_context_t *debug_context)
 {
@@ -821,6 +825,27 @@ set_cfp(debug_context_t *debug_context)
             debug_context->cfp[debug_context->cfp_count++] = cfp;
         cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
     }
+}
+
+static void 
+save_frames(debug_context_t *debug_context)
+{
+    int size;
+
+    if (debug_context->cfp_count == 0)
+        return;
+
+    debug_context->catch_table.mod_name = rb_obj_class(rb_errinfo());
+    debug_context->catch_table.errinfo = rb_errinfo();
+
+    debug_context->catch_cfp = GET_THREAD()->cfp;
+    if (debug_context->frames != NULL)
+        free(debug_context->frames);
+
+    size = sizeof(rb_control_frame_t) * 
+        ((debug_context->cfp[debug_context->cfp_count-1] - debug_context->cfp[0]) + 1);
+    debug_context->frames = (rb_control_frame_t*)malloc(size);
+    memcpy(debug_context->frames, debug_context->cfp[0], size);
 }
 
 static void
@@ -1107,17 +1132,13 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
             if (hit_count != Qnil)
             {
                 if (!catch_exception(debug_context, mod_name))
-                    fprintf(stderr, "*** CATCH EXCEPTION FAILED\n");
+                    rb_raise(rb_eRuntimeError, "Could not catch exception");
                 break;
             }
         }
 
-        if (!exception_caught(debug_context))
-        {
-            catch_exception(debug_context, Qnil);
-            break;
-        }
-
+        if (catchall == Qtrue)
+            save_frames(debug_context);
         break;
     }
     }

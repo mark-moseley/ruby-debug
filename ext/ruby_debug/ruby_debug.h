@@ -56,10 +56,12 @@ typedef struct {
     rb_control_frame_t *start_cfp;
     rb_control_frame_t *cur_cfp;
     rb_control_frame_t *top_cfp;
+    rb_control_frame_t *catch_cfp;
+    rb_control_frame_t *frames;
 //
     struct RData catch_rdata;
     struct rb_iseq_struct catch_iseq;
-    struct iseq_insn_info_entry catch_info_entry[2];
+    struct iseq_insn_info_entry catch_info_entry;
     struct RNode catch_cref_stack;
     VALUE iseq_insn[4];
 //
