@@ -13,6 +13,7 @@ enum ctx_stop_reason {CTX_STOP_NONE, CTX_STOP_STEP, CTX_STOP_BREAKPOINT,
 #define CTX_FL_STEPPED      (1<<8)
 #define CTX_FL_FORCE_MOVE   (1<<9)
 #define CTX_FL_CATCHING     (1<<10)
+#define CTX_FL_AT_LINE      (1<<11)
 
 #define CTX_FL_TEST(c,f)  ((c)->flags & (f))
 #define CTX_FL_SET(c,f)   do { (c)->flags |= (f); } while (0)
@@ -33,25 +34,6 @@ typedef struct {
 } iseq_catch_t;
 
 typedef struct {
-    int argc;         /* Number of arguments a frame should have. */
-    ID id;
-    ID orig_id;
-    int line;
-    const char * file;
-    VALUE self;
-    VALUE arg_ary;
-    union {
-        struct {
-			rb_control_frame_t *cfp;
-			VALUE *bp;
-			struct rb_iseq_struct *block_iseq;
-			VALUE *block_pc;
-            VALUE *last_pc;
-        } runtime;
-    } info;
-} debug_frame_t;
-
-typedef struct {
     VALUE thread_id;
     int thnum;
     int flags;
@@ -60,9 +42,7 @@ typedef struct {
     int dest_frame;
     int stop_line;
     int stop_frame;
-    int stack_size;
     int stack_len;
-    debug_frame_t *frames;
     const char * last_file;
     int last_line;
     VALUE breakpoint;
@@ -76,7 +56,6 @@ typedef struct {
 //
     rb_control_frame_t *start_cfp;
     rb_control_frame_t *cur_cfp;
-    int in_at_line;
 //
     struct RData catch_rdata;
     struct rb_iseq_struct catch_iseq;
@@ -95,17 +74,7 @@ extern VALUE rdebug_catchpoints;
 extern VALUE rdebug_threads_tbl;
 
 /* routines in ruby_debug.c */
-extern int  filename_cmp(VALUE source, char *file);
-
-#define IS_STARTED  (rdebug_threads_tbl != Qnil)
-static inline void
-debug_check_started()
-{
-    if(!IS_STARTED)
-    {
-        rb_raise(rb_eRuntimeError, "Debugger.start is not called yet.");
-    }
-}
+extern int  filename_cmp(VALUE source, const char *file);
 
 static inline int
 classname_cmp(VALUE name, VALUE klass)
@@ -144,7 +113,7 @@ extern int   check_breakpoint_hit_condition(VALUE breakpoint);
 extern VALUE check_breakpoints_by_method(debug_context_t *debug_context, 
     VALUE klass, ID mid, VALUE self);
 extern VALUE check_breakpoints_by_pos(debug_context_t *debug_context, 
-    char *file, int line);
+    const char *file, int line);
 extern VALUE create_breakpoint_from_args(int argc, VALUE *argv, int id);
 extern VALUE context_breakpoint(VALUE self);
 extern VALUE context_set_breakpoint(int argc, VALUE *argv, VALUE self);

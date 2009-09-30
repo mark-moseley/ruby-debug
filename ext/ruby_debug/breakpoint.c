@@ -54,7 +54,7 @@ check_breakpoint_hit_condition(VALUE breakpoint)
 }
 
 static int
-check_breakpoint_by_pos(VALUE breakpoint, char *file, int line)
+check_breakpoint_by_pos(VALUE breakpoint, const char *file, int line)
 {
     debug_breakpoint_t *debug_breakpoint;
 
@@ -93,7 +93,7 @@ check_breakpoint_by_method(VALUE breakpoint, VALUE klass, ID mid, VALUE self)
 }
 
 VALUE
-check_breakpoints_by_pos(debug_context_t *debug_context, char *file, int line)
+check_breakpoints_by_pos(debug_context_t *debug_context, const char *file, int line)
 {
     VALUE breakpoint;
     int i;
@@ -235,8 +235,6 @@ rdebug_remove_breakpoint(VALUE self, VALUE id_value)
 VALUE
 debug_catchpoints(VALUE self)
 {
-    debug_check_started();
-
     return rdebug_catchpoints;
 }
 
@@ -249,8 +247,6 @@ debug_catchpoints(VALUE self)
 VALUE
 rdebug_add_catchpoint(VALUE self, VALUE value)
 {
-    debug_check_started();
-
     if (TYPE(value) != T_STRING) {
         rb_raise(rb_eTypeError, "value of a catchpoint must be String");
     }
@@ -268,8 +264,6 @@ VALUE
 context_breakpoint(VALUE self)
 {
     debug_context_t *debug_context;
-
-    debug_check_started();
 
     Data_Get_Struct(self, debug_context_t, debug_context);
     return debug_context->breakpoint;
@@ -293,8 +287,6 @@ context_set_breakpoint(int argc, VALUE *argv, VALUE self)
 {
     VALUE result;
     debug_context_t *debug_context;
-
-    debug_check_started();
 
     Data_Get_Struct(self, debug_context_t, debug_context);
     result = create_breakpoint_from_args(argc, argv, 0);
