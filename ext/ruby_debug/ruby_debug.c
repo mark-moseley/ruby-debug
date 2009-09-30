@@ -351,6 +351,7 @@ create_exception_catchall(debug_context_t *debug_context)
         cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
 
     debug_context->start_cfp = cfp;
+    return;
 
     iseq = cfp->iseq;
     iseq->catch_table_size++;
@@ -470,6 +471,7 @@ debug_context_create(VALUE thread)
     debug_context->cfp_count = 0;
     debug_context->start_cfp = NULL;
     debug_context->cur_cfp = NULL;
+    debug_context->top_cfp = NULL;
     debug_context->cfp = NULL;
     if(rb_obj_class(thread) == cDebugThread)
         CTX_FL_SET(debug_context, CTX_FL_IGNORE);
@@ -530,18 +532,12 @@ static VALUE
 call_at_line(VALUE context, debug_context_t *debug_context, VALUE file, VALUE line)
 {
     VALUE args;
-    VALUE ret;
     
     last_debugged_thnum = debug_context->thnum;
     save_current_position(debug_context);
 
     args = rb_ary_new3(3, context, file, line);
-    CTX_FL_SET(debug_context, CTX_FL_SKIPPED);
-    CTX_FL_SET(debug_context, CTX_FL_AT_LINE);
-    ret = rb_protect(call_at_line_unprotected, args, 0);
-    CTX_FL_UNSET(debug_context, CTX_FL_SKIPPED);
-    CTX_FL_UNSET(debug_context, CTX_FL_AT_LINE);
-    return(ret);
+    return(rb_protect(call_at_line_unprotected, args, 0));
 }
 
 #if defined DOSISH
@@ -640,10 +636,10 @@ call_at_line_check(VALUE self, debug_context_t *debug_context, VALUE breakpoint,
     /* check breakpoint expression */
     if(breakpoint != Qnil)
     {
-        //if(!check_breakpoint_expression(breakpoint, binding))
-          //  return;// TODO
+        if(!check_breakpoint_expression(breakpoint, rb_binding_new()))
+            return;
         if(!check_breakpoint_hit_condition(breakpoint))
-            return;// TODO
+            return;
         if(breakpoint != debug_context->breakpoint)
         {
             debug_context->stop_reason = CTX_STOP_BREAKPOINT;
@@ -858,10 +854,14 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         return;
     thread_context_lookup(th->self, &context, &debug_context, 1);
 
-    if (debug_context->start_cfp == NULL)
-        create_exception_catchall(debug_context);
-    if (th->cfp > debug_context->start_cfp)
+    if (iseq && (self == rb_mKernel || self == mDebugger) && 
+        (strcmp(RSTRING_PTR(iseq->name), "binding_n") == 0))
         return;
+
+    if (debug_context->top_cfp && th->cfp >= debug_context->top_cfp)
+        return;
+    if (debug_context->start_cfp == NULL || th->cfp > debug_context->start_cfp)
+        create_exception_catchall(debug_context);
 
     if ((event == RUBY_EVENT_LINE) || (event == RUBY_EVENT_CALL))
     {
@@ -1010,9 +1010,8 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         breakpoint = check_breakpoints_by_method(debug_context, klass, mid, self);
         if(breakpoint != Qnil)
         {
-            // TODO
-//            if(!check_breakpoint_expression(breakpoint, binding))
-  //              break;
+            if(!check_breakpoint_expression(breakpoint, rb_binding_new()))
+                break;
             if(!check_breakpoint_hit_condition(breakpoint))
                 break;
             if(breakpoint != debug_context->breakpoint)
@@ -1480,6 +1479,7 @@ debug_debug_load(int argc, VALUE *argv, VALUE self)
     context = debug_current_context(self);
     Data_Get_Struct(context, debug_context_t, debug_context);
     debug_context->start_cfp = NULL;
+    debug_context->top_cfp = GET_THREAD()->cfp;
     if(RTEST(stop))
         debug_context->stop_next = 1;
     /* Initializing $0 to the script's path */
@@ -1708,8 +1708,6 @@ context_frame_binding(int argc, VALUE *argv, VALUE self)
     Data_Get_Struct(self, debug_context_t, debug_context);
     GetThreadPtr(context_thread_0(debug_context), th);
     cfp = GET_CFP;
-    if (CTX_FL_TEST(debug_context, CTX_FL_AT_LINE))
-        cfp--;
 
     //cfp = rb_vm_get_ruby_level_next_cfp(th, cfp);
     bindval = binding_alloc(rb_cBinding);
@@ -1825,29 +1823,6 @@ context_frame_locals(int argc, VALUE *argv, VALUE self)
         }
     }
 
-    iseq = cfp->block_iseq;
-    if ((iseq != NULL) && (iseq->local_table != NULL) && (iseq != cfp->iseq))
-    {
-        rb_thread_t *th;
-
-        rb_control_frame_t *block_frame = RUBY_VM_NEXT_CONTROL_FRAME(cfp);
-        GetThreadPtr(context_thread_0(debug_context), th);
-        while (block_frame > (rb_control_frame_t*)th->stack)
-        {
-            if (block_frame->iseq == cfp->block_iseq)
-            {
-                for (i = 0; i < iseq->local_table_size; i++)
-                {
-                    VALUE str = rb_id2str(iseq->local_table[i]);
-                    if (str != 0)
-                        rb_hash_aset(hash, str, *(block_frame->dfp - iseq->local_table_size + i - 1));
-                }
-                return(hash);
-            }
-            block_frame = RUBY_VM_NEXT_CONTROL_FRAME(block_frame);
-        } 
-    }
-
     return(hash);
 }
 
@@ -1889,12 +1864,18 @@ context_frame_args(int argc, VALUE *argv, VALUE self)
  *   call-seq:
  *      context.frame_self(frame_postion=0) -> obj
  *
- *   Deprecated.
+ *   Returns self object of the frame.
  */
 static VALUE
 context_frame_self(int argc, VALUE *argv, VALUE self)
 {
-    return(Qnil);
+    VALUE frame;
+    debug_context_t *debug_context;
+    
+    frame = optional_frame_position(argc, argv);
+    Data_Get_Struct(self, debug_context_t, debug_context);
+
+    return(GET_CFP->self);
 }
 
 /*

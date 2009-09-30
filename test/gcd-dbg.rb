@@ -9,7 +9,7 @@ $:.unshift File.join(TOP_SRC_DIR, "ext")
 $:.unshift File.join(TOP_SRC_DIR, "lib")
 $:.unshift File.join(TOP_SRC_DIR, "cli")
 require 'ruby-debug'
-Debugger.start
+
 
 # GCD. We assume positive numbers
 def gcd(a, b)

@@ -13,7 +13,6 @@ enum ctx_stop_reason {CTX_STOP_NONE, CTX_STOP_STEP, CTX_STOP_BREAKPOINT,
 #define CTX_FL_STEPPED      (1<<8)
 #define CTX_FL_FORCE_MOVE   (1<<9)
 #define CTX_FL_CATCHING     (1<<10)
-#define CTX_FL_AT_LINE      (1<<11)
 
 #define CTX_FL_TEST(c,f)  ((c)->flags & (f))
 #define CTX_FL_SET(c,f)   do { (c)->flags |= (f); } while (0)
@@ -56,6 +55,7 @@ typedef struct {
 //
     rb_control_frame_t *start_cfp;
     rb_control_frame_t *cur_cfp;
+    rb_control_frame_t *top_cfp;
 //
     struct RData catch_rdata;
     struct rb_iseq_struct catch_iseq;

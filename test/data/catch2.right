@@ -15,6 +15,7 @@ Catch exception ZeroDivisionError.
 foo begin
 bar begin
 Catchpoint at pm-catch2.rb:5: `divided by 0' (ZeroDivisionError)
+	from tdebug.rb:61:in `debug_program'
 	from tdebug.rb:252:in `<top (required)>'
 	from ../rdbg.rb:23:in `load'
 	from ../rdbg.rb:23:in `runner'
@@ -46,6 +47,7 @@ nil
 # c
 bar begin
 Catchpoint at pm-catch2.rb:6: `ZeroDivisionError' (ZeroDivisionError)
+	from tdebug.rb:61:in `debug_program'
 	from tdebug.rb:252:in `<top (required)>'
 	from ../rdbg.rb:23:in `load'
 	from ../rdbg.rb:23:in `runner'

@@ -20,7 +20,7 @@ class TestRubyDebug < Test::Unit::TestCase
                  File.basename(Debugger.current_context.frame_file))
     assert_raises(ArgumentError) {Debugger.current_context.frame_file(1, 2)}
     assert_raises(ArgumentError) {Debugger.current_context.frame_file(10)}
-    assert_equal(6, Debugger.current_context.stack_size)
+    assert_equal(7, Debugger.current_context.stack_size)
     assert_equal(TestRubyDebug, Debugger.current_context.frame_class)
     assert_equal(false, Debugger.current_context.dead?, 'Not dead yet!')
   end

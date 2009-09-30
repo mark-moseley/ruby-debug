@@ -237,7 +237,7 @@ module Kernel
     if block
       Debugger.start({}, &block)
     else
-      Debugger.start unless Debugger.started?
+      Debugger.start
       Debugger.run_init_script(StringIO.new)
       if 0 == steps
         Debugger.current_context.stop_frame = 0
@@ -256,7 +256,7 @@ module Kernel
       if RUBY_VERSION < "1.9"
         Debugger.current_context.frame_binding(n+2)
       else
-        Debugger.current_context.frame_binding(n+1)
+        Debugger.current_context.frame_binding(n)
       end
     end
   end
