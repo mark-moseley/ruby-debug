@@ -1,5 +1,5 @@
 scope-var.rb:1
-def scope1(arg1, arg2)
+require 'ruby_debug'
 # # ********************************************************
 # # This tests variable display by scope
 # # ********************************************************
@@ -18,41 +18,68 @@ Annotation level is 3
 No breakpoints.
 
 stack
---> #0 at line scope-var.rb:7
+--> #0 at line scope-var.rb:2
 
 variables
+s0_var1 = nil
 self = main
 
-source scope-var.rb:7
+source scope-var.rb:2
+def scope1(arg1, arg2)
+# step
+starting
+stopped
+stack
+--> #0 at line scope-var.rb:8
+
+variables
+s0_var1 = nil
+self = main
+
+source scope-var.rb:8
 def scope2
 # step
 starting
 stopped
 stack
---> #0 at line scope-var.rb:16
+--> #0 at line scope-var.rb:17
 
 variables
+s0_var1 = nil
 self = main
 
-source scope-var.rb:16
+source scope-var.rb:17
 def scope3
 # step
 starting
 stopped
 stack
---> #0 at line scope-var.rb:21
+--> #0 at line scope-var.rb:28
 
 variables
+s0_var1 = nil
 self = main
 
-source scope-var.rb:21
+source scope-var.rb:28
+s0_var1 = 1357;
+# step
+starting
+stopped
+stack
+--> #0 at line scope-var.rb:29
+
+variables
+s0_var1 = 1357
+self = main
+
+source scope-var.rb:29
 scope1(111, 222)
 # step
 starting
 stopped
 stack
---> #0 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:2
-    #1 at line scope-var.rb:21
+--> #0 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:3
+    #1 at line scope-var.rb:29
 
 variables
 arg1 = 111
@@ -61,14 +88,14 @@ s1_var1 = nil
 s1_var2 = nil
 self = main
 
-source scope-var.rb:2
+source scope-var.rb:3
 s1_var1 = 123
 # step
 starting
 stopped
 stack
---> #0 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:3
-    #1 at line scope-var.rb:21
+--> #0 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
+    #1 at line scope-var.rb:29
 
 variables
 arg1 = 111
@@ -77,14 +104,14 @@ s1_var1 = 123
 s1_var2 = nil
 self = main
 
-source scope-var.rb:3
+source scope-var.rb:4
 s1_var2 = "scope1"
 # step
 starting
 stopped
 stack
---> #0 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #1 at line scope-var.rb:21
+--> #0 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #1 at line scope-var.rb:29
 
 variables
 arg1 = 111
@@ -93,61 +120,61 @@ s1_var1 = 123
 s1_var2 = "scope1"
 self = main
 
-source scope-var.rb:4
+source scope-var.rb:5
 scope2
 # step
 starting
 stopped
 stack
---> #0 Object.scope2 at line scope-var.rb:8
-    #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #2 at line scope-var.rb:21
+--> #0 Object.scope2 at line scope-var.rb:9
+    #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #2 at line scope-var.rb:29
 
 variables
 s2_var1 = nil
 s2_var2 = nil
 self = main
 
-source scope-var.rb:8
+source scope-var.rb:9
 s2_var1 = 456
 # step
 starting
 stopped
 stack
---> #0 Object.scope2 at line scope-var.rb:9
-    #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #2 at line scope-var.rb:21
+--> #0 Object.scope2 at line scope-var.rb:10
+    #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #2 at line scope-var.rb:29
 
 variables
 s2_var1 = 456
 s2_var2 = nil
 self = main
 
-source scope-var.rb:9
+source scope-var.rb:10
 s2_var2 = "scope2"
 # step
 starting
 stopped
 stack
---> #0 Object.scope2 at line scope-var.rb:10
-    #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #2 at line scope-var.rb:21
+--> #0 Object.scope2 at line scope-var.rb:11
+    #1 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #2 at line scope-var.rb:29
 
 variables
 s2_var1 = 456
 s2_var2 = "scope2"
 self = main
 
-source scope-var.rb:10
+source scope-var.rb:11
 0.upto(5) do |i|
 # step
 starting
 stopped
 stack
---> #0 at line scope-var.rb:11
-    #1 Object.scope2 at line scope-var.rb:10
-    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #3 at line scope-var.rb:21
+--> #0 at line scope-var.rb:12
+    #1 Object.scope2 at line scope-var.rb:11
+    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #3 at line scope-var.rb:29
 Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
@@ -155,16 +182,16 @@ i = 0
 j = nil
 self = main
 
-source scope-var.rb:11
+source scope-var.rb:12
 j = i * 10
 # step
 starting
 stopped
 stack
---> #0 at line scope-var.rb:12
-    #1 Object.scope2 at line scope-var.rb:10
-    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #3 at line scope-var.rb:21
+--> #0 at line scope-var.rb:13
+    #1 Object.scope2 at line scope-var.rb:11
+    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #3 at line scope-var.rb:29
 Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
@@ -172,17 +199,17 @@ i = 0
 j = 0
 self = main
 
-source scope-var.rb:12
+source scope-var.rb:13
 scope3
 # step
 starting
 stopped
 stack
---> #0 Object.scope3 at line scope-var.rb:17
-    #1 at line scope-var.rb:12
-    #2 Object.scope2 at line scope-var.rb:10
-    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #4 at line scope-var.rb:21
+--> #0 Object.scope3 at line scope-var.rb:18
+    #1 at line scope-var.rb:13
+    #2 Object.scope2 at line scope-var.rb:11
+    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #4 at line scope-var.rb:29
 Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
@@ -190,17 +217,17 @@ s3_var1 = nil
 s3_var2 = nil
 self = main
 
-source scope-var.rb:17
+source scope-var.rb:18
 s3_var1 = 789
 # step
 starting
 stopped
 stack
---> #0 Object.scope3 at line scope-var.rb:18
-    #1 at line scope-var.rb:12
-    #2 Object.scope2 at line scope-var.rb:10
-    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #4 at line scope-var.rb:21
+--> #0 Object.scope3 at line scope-var.rb:19
+    #1 at line scope-var.rb:13
+    #2 Object.scope2 at line scope-var.rb:11
+    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #4 at line scope-var.rb:29
 Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
@@ -208,16 +235,232 @@ s3_var1 = 789
 s3_var2 = nil
 self = main
 
-source scope-var.rb:18
+source scope-var.rb:19
 s3_var2 = "scope3"
 # step
 starting
 stopped
 stack
---> #0 at line scope-var.rb:11
-    #1 Object.scope2 at line scope-var.rb:10
-    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #3 at line scope-var.rb:21
+--> #0 Object.scope3 at line scope-var.rb:20
+    #1 at line scope-var.rb:13
+    #2 Object.scope2 at line scope-var.rb:11
+    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #4 at line scope-var.rb:29
+Warning: saved frames may be incomplete; compare with caller(0).
+
+variables
+s3_var1 = 789
+s3_var2 = "scope3"
+self = main
+
+source scope-var.rb:20
+puts eval("s3_var1", Debugger.current_context.frame_binding(0))
+# step
+starting
+stopped
+stack
+--> #0 at line (eval):1
+    #1 Object.scope3 at line scope-var.rb:20
+    #2 at line scope-var.rb:13
+    #3 Object.scope2 at line scope-var.rb:11
+    #4 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #5 at line scope-var.rb:29
+Warning: saved frames may be incomplete; compare with caller(0).
+
+variables
+self = main
+
+source (eval):1
+
+# step
+starting
+789
+stopped
+stack
+--> #0 Object.scope3 at line scope-var.rb:21
+    #1 at line scope-var.rb:13
+    #2 Object.scope2 at line scope-var.rb:11
+    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #4 at line scope-var.rb:29
+Warning: saved frames may be incomplete; compare with caller(0).
+
+variables
+s3_var1 = 789
+s3_var2 = "scope3"
+self = main
+
+source scope-var.rb:21
+puts eval("i", Debugger.current_context.frame_binding(1))
+# step
+starting
+stopped
+stack
+--> #0 at line (eval):1
+    #1 Object.scope3 at line scope-var.rb:21
+    #2 at line scope-var.rb:13
+    #3 Object.scope2 at line scope-var.rb:11
+    #4 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #5 at line scope-var.rb:29
+Warning: saved frames may be incomplete; compare with caller(0).
+
+variables
+self = main
+
+source (eval):1
+
+# step
+starting
+0
+stopped
+stack
+--> #0 Object.scope3 at line scope-var.rb:22
+    #1 at line scope-var.rb:13
+    #2 Object.scope2 at line scope-var.rb:11
+    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #4 at line scope-var.rb:29
+Warning: saved frames may be incomplete; compare with caller(0).
+
+variables
+s3_var1 = 789
+s3_var2 = "scope3"
+self = main
+
+source scope-var.rb:22
+puts eval("j", Debugger.current_context.frame_binding(1))
+# step
+starting
+stopped
+stack
+--> #0 at line (eval):1
+    #1 Object.scope3 at line scope-var.rb:22
+    #2 at line scope-var.rb:13
+    #3 Object.scope2 at line scope-var.rb:11
+    #4 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #5 at line scope-var.rb:29
+Warning: saved frames may be incomplete; compare with caller(0).
+
+variables
+self = main
+
+source (eval):1
+
+# step
+starting
+0
+stopped
+stack
+--> #0 Object.scope3 at line scope-var.rb:23
+    #1 at line scope-var.rb:13
+    #2 Object.scope2 at line scope-var.rb:11
+    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #4 at line scope-var.rb:29
+Warning: saved frames may be incomplete; compare with caller(0).
+
+variables
+s3_var1 = 789
+s3_var2 = "scope3"
+self = main
+
+source scope-var.rb:23
+puts eval("s2_var1", Debugger.current_context.frame_binding(2))
+# step
+starting
+stopped
+stack
+--> #0 at line (eval):1
+    #1 Object.scope3 at line scope-var.rb:23
+    #2 at line scope-var.rb:13
+    #3 Object.scope2 at line scope-var.rb:11
+    #4 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #5 at line scope-var.rb:29
+Warning: saved frames may be incomplete; compare with caller(0).
+
+variables
+self = main
+
+source (eval):1
+
+# step
+starting
+456
+stopped
+stack
+--> #0 Object.scope3 at line scope-var.rb:24
+    #1 at line scope-var.rb:13
+    #2 Object.scope2 at line scope-var.rb:11
+    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #4 at line scope-var.rb:29
+Warning: saved frames may be incomplete; compare with caller(0).
+
+variables
+s3_var1 = 789
+s3_var2 = "scope3"
+self = main
+
+source scope-var.rb:24
+puts eval("s1_var1", Debugger.current_context.frame_binding(3))
+# step
+starting
+stopped
+stack
+--> #0 at line (eval):1
+    #1 Object.scope3 at line scope-var.rb:24
+    #2 at line scope-var.rb:13
+    #3 Object.scope2 at line scope-var.rb:11
+    #4 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #5 at line scope-var.rb:29
+Warning: saved frames may be incomplete; compare with caller(0).
+
+variables
+self = main
+
+source (eval):1
+
+# step
+starting
+123
+stopped
+stack
+--> #0 Object.scope3 at line scope-var.rb:25
+    #1 at line scope-var.rb:13
+    #2 Object.scope2 at line scope-var.rb:11
+    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #4 at line scope-var.rb:29
+Warning: saved frames may be incomplete; compare with caller(0).
+
+variables
+s3_var1 = 789
+s3_var2 = "scope3"
+self = main
+
+source scope-var.rb:25
+puts eval("s0_var1", Debugger.current_context.frame_binding(4))
+# step
+starting
+stopped
+stack
+--> #0 at line (eval):1
+    #1 Object.scope3 at line scope-var.rb:25
+    #2 at line scope-var.rb:13
+    #3 Object.scope2 at line scope-var.rb:11
+    #4 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #5 at line scope-var.rb:29
+Warning: saved frames may be incomplete; compare with caller(0).
+
+variables
+self = main
+
+source (eval):1
+
+# step
+starting
+1357
+stopped
+stack
+--> #0 at line scope-var.rb:12
+    #1 Object.scope2 at line scope-var.rb:11
+    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #3 at line scope-var.rb:29
 Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
@@ -225,16 +468,16 @@ i = 1
 j = nil
 self = main
 
-source scope-var.rb:11
+source scope-var.rb:12
 j = i * 10
 # step
 starting
 stopped
 stack
---> #0 at line scope-var.rb:12
-    #1 Object.scope2 at line scope-var.rb:10
-    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #3 at line scope-var.rb:21
+--> #0 at line scope-var.rb:13
+    #1 Object.scope2 at line scope-var.rb:11
+    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #3 at line scope-var.rb:29
 Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
@@ -242,17 +485,17 @@ i = 1
 j = 10
 self = main
 
-source scope-var.rb:12
+source scope-var.rb:13
 scope3
 # step
 starting
 stopped
 stack
---> #0 Object.scope3 at line scope-var.rb:17
-    #1 at line scope-var.rb:12
-    #2 Object.scope2 at line scope-var.rb:10
-    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #4 at line scope-var.rb:21
+--> #0 Object.scope3 at line scope-var.rb:18
+    #1 at line scope-var.rb:13
+    #2 Object.scope2 at line scope-var.rb:11
+    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #4 at line scope-var.rb:29
 Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
@@ -260,17 +503,17 @@ s3_var1 = nil
 s3_var2 = nil
 self = main
 
-source scope-var.rb:17
+source scope-var.rb:18
 s3_var1 = 789
 # step
 starting
 stopped
 stack
---> #0 Object.scope3 at line scope-var.rb:18
-    #1 at line scope-var.rb:12
-    #2 Object.scope2 at line scope-var.rb:10
-    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #4 at line scope-var.rb:21
+--> #0 Object.scope3 at line scope-var.rb:19
+    #1 at line scope-var.rb:13
+    #2 Object.scope2 at line scope-var.rb:11
+    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #4 at line scope-var.rb:29
 Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
@@ -278,287 +521,90 @@ s3_var1 = 789
 s3_var2 = nil
 self = main
 
-source scope-var.rb:18
+source scope-var.rb:19
 s3_var2 = "scope3"
 # step
 starting
 stopped
 stack
---> #0 at line scope-var.rb:11
-    #1 Object.scope2 at line scope-var.rb:10
-    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #3 at line scope-var.rb:21
-Warning: saved frames may be incomplete; compare with caller(0).
-
-variables
-i = 2
-j = nil
-self = main
-
-source scope-var.rb:11
-j = i * 10
-# step
-starting
-stopped
-stack
---> #0 at line scope-var.rb:12
-    #1 Object.scope2 at line scope-var.rb:10
-    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #3 at line scope-var.rb:21
-Warning: saved frames may be incomplete; compare with caller(0).
-
-variables
-i = 2
-j = 20
-self = main
-
-source scope-var.rb:12
-scope3
-# step
-starting
-stopped
-stack
---> #0 Object.scope3 at line scope-var.rb:17
-    #1 at line scope-var.rb:12
-    #2 Object.scope2 at line scope-var.rb:10
-    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #4 at line scope-var.rb:21
-Warning: saved frames may be incomplete; compare with caller(0).
-
-variables
-s3_var1 = nil
-s3_var2 = nil
-self = main
-
-source scope-var.rb:17
-s3_var1 = 789
-# step
-starting
-stopped
-stack
---> #0 Object.scope3 at line scope-var.rb:18
-    #1 at line scope-var.rb:12
-    #2 Object.scope2 at line scope-var.rb:10
-    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #4 at line scope-var.rb:21
+--> #0 Object.scope3 at line scope-var.rb:20
+    #1 at line scope-var.rb:13
+    #2 Object.scope2 at line scope-var.rb:11
+    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #4 at line scope-var.rb:29
 Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 s3_var1 = 789
-s3_var2 = nil
-self = main
-
-source scope-var.rb:18
 s3_var2 = "scope3"
+self = main
+
+source scope-var.rb:20
+puts eval("s3_var1", Debugger.current_context.frame_binding(0))
 # step
 starting
 stopped
 stack
---> #0 at line scope-var.rb:11
-    #1 Object.scope2 at line scope-var.rb:10
-    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #3 at line scope-var.rb:21
+--> #0 at line (eval):1
+    #1 Object.scope3 at line scope-var.rb:20
+    #2 at line scope-var.rb:13
+    #3 Object.scope2 at line scope-var.rb:11
+    #4 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #5 at line scope-var.rb:29
 Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
-i = 3
-j = nil
 self = main
 
-source scope-var.rb:11
-j = i * 10
+source (eval):1
+
 # step
 starting
+789
 stopped
 stack
---> #0 at line scope-var.rb:12
-    #1 Object.scope2 at line scope-var.rb:10
-    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #3 at line scope-var.rb:21
-Warning: saved frames may be incomplete; compare with caller(0).
-
-variables
-i = 3
-j = 30
-self = main
-
-source scope-var.rb:12
-scope3
-# step
-starting
-stopped
-stack
---> #0 Object.scope3 at line scope-var.rb:17
-    #1 at line scope-var.rb:12
-    #2 Object.scope2 at line scope-var.rb:10
-    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #4 at line scope-var.rb:21
-Warning: saved frames may be incomplete; compare with caller(0).
-
-variables
-s3_var1 = nil
-s3_var2 = nil
-self = main
-
-source scope-var.rb:17
-s3_var1 = 789
-# step
-starting
-stopped
-stack
---> #0 Object.scope3 at line scope-var.rb:18
-    #1 at line scope-var.rb:12
-    #2 Object.scope2 at line scope-var.rb:10
-    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #4 at line scope-var.rb:21
+--> #0 Object.scope3 at line scope-var.rb:21
+    #1 at line scope-var.rb:13
+    #2 Object.scope2 at line scope-var.rb:11
+    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
+    #4 at line scope-var.rb:29
 Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 s3_var1 = 789
-s3_var2 = nil
-self = main
-
-source scope-var.rb:18
 s3_var2 = "scope3"
-# step
-starting
-stopped
-stack
---> #0 at line scope-var.rb:11
-    #1 Object.scope2 at line scope-var.rb:10
-    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #3 at line scope-var.rb:21
-Warning: saved frames may be incomplete; compare with caller(0).
-
-variables
-i = 4
-j = nil
 self = main
 
-source scope-var.rb:11
-j = i * 10
-# step
+source scope-var.rb:21
+puts eval("i", Debugger.current_context.frame_binding(1))
+# cont
 starting
-stopped
-stack
---> #0 at line scope-var.rb:12
-    #1 Object.scope2 at line scope-var.rb:10
-    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #3 at line scope-var.rb:21
-Warning: saved frames may be incomplete; compare with caller(0).
-
-variables
-i = 4
-j = 40
-self = main
-
-source scope-var.rb:12
-scope3
-# step
-starting
-stopped
-stack
---> #0 Object.scope3 at line scope-var.rb:17
-    #1 at line scope-var.rb:12
-    #2 Object.scope2 at line scope-var.rb:10
-    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #4 at line scope-var.rb:21
-Warning: saved frames may be incomplete; compare with caller(0).
-
-variables
-s3_var1 = nil
-s3_var2 = nil
-self = main
-
-source scope-var.rb:17
-s3_var1 = 789
-# step
-starting
-stopped
-stack
---> #0 Object.scope3 at line scope-var.rb:18
-    #1 at line scope-var.rb:12
-    #2 Object.scope2 at line scope-var.rb:10
-    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #4 at line scope-var.rb:21
-Warning: saved frames may be incomplete; compare with caller(0).
-
-variables
-s3_var1 = 789
-s3_var2 = nil
-self = main
-
-source scope-var.rb:18
-s3_var2 = "scope3"
-# step
-starting
-stopped
-stack
---> #0 at line scope-var.rb:11
-    #1 Object.scope2 at line scope-var.rb:10
-    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #3 at line scope-var.rb:21
-Warning: saved frames may be incomplete; compare with caller(0).
-
-variables
-i = 5
-j = nil
-self = main
-
-source scope-var.rb:11
-j = i * 10
-# step
-starting
-stopped
-stack
---> #0 at line scope-var.rb:12
-    #1 Object.scope2 at line scope-var.rb:10
-    #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #3 at line scope-var.rb:21
-Warning: saved frames may be incomplete; compare with caller(0).
-
-variables
-i = 5
-j = 50
-self = main
-
-source scope-var.rb:12
-scope3
-# step
-starting
-stopped
-stack
---> #0 Object.scope3 at line scope-var.rb:17
-    #1 at line scope-var.rb:12
-    #2 Object.scope2 at line scope-var.rb:10
-    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #4 at line scope-var.rb:21
-Warning: saved frames may be incomplete; compare with caller(0).
-
-variables
-s3_var1 = nil
-s3_var2 = nil
-self = main
-
-source scope-var.rb:17
-s3_var1 = 789
-# step
-starting
-stopped
-stack
---> #0 Object.scope3 at line scope-var.rb:18
-    #1 at line scope-var.rb:12
-    #2 Object.scope2 at line scope-var.rb:10
-    #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:4
-    #4 at line scope-var.rb:21
-Warning: saved frames may be incomplete; compare with caller(0).
-
-variables
-s3_var1 = 789
-s3_var2 = nil
-self = main
-
-source scope-var.rb:18
-s3_var2 = "scope3"
-# step
-starting
+1
+10
+456
+123
+1357
+789
+2
+20
+456
+123
+1357
+789
+3
+30
+456
+123
+1357
+789
+4
+40
+456
+123
+1357
+789
+5
+50
+456
+123
+1357

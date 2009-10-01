@@ -10,7 +10,7 @@
 #include <insns_info.inc>
 #include "ruby_debug.h"
 
-#define DEBUG_VERSION "0.11"
+#define DEBUG_VERSION "0.12"
 
 #define GET_CFP     debug_context->cfp[check_frame_number(debug_context, frame)]
 
@@ -22,8 +22,6 @@
 #define RUBY_VERSION_1_9_1
 #endif
 
-#define STACK_SIZE_INCREMENT 128
-
 RUBY_EXTERN int rb_vm_get_sourceline(const rb_control_frame_t *cfp); /* from vm.c */
 RUBY_EXTERN VALUE rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE line, VALUE opt); /* from iseq.c */
 
@@ -34,10 +32,8 @@ typedef struct {
 static VALUE hook_off           = Qtrue;
 static VALUE tracing            = Qfalse;
 static VALUE locker             = Qnil;
-static VALUE keep_frame_binding = Qfalse;
 static VALUE debug              = Qfalse;
 static VALUE catchall           = Qtrue;
-static VALUE track_frame_args   = Qfalse;
 static VALUE skip_next_exception= Qfalse;
 
 static VALUE last_context = Qnil;
@@ -339,13 +335,15 @@ FUNC_FASTCALL(do_catchall)(rb_thread_t *th, rb_control_frame_t *cfp)
     thread_context_lookup(th->self, &context, &debug_context, 0);
     if (debug_context == NULL)
         rb_raise(rb_eRuntimeError, "Lost context in catchall");
+    if (debug_context->saved_frames == NULL)
+        rb_raise(rb_eRuntimeError, "catchall called improperly"); // TODO: throw
 
     size = sizeof(rb_control_frame_t) *
         ((debug_context->cfp[debug_context->cfp_count-1] - debug_context->cfp[0]) + 1);
-    memcpy(debug_context->cfp[0], debug_context->frames, size);
+    memcpy(debug_context->cfp[0], debug_context->saved_frames, size);
 
-    free(debug_context->frames);
-    debug_context->frames = NULL;
+    free(debug_context->saved_frames);
+    debug_context->saved_frames = NULL;
 
     CTX_FL_SET(debug_context, CTX_FL_CATCHING);
     th->cfp = debug_context->cfp[0];
@@ -363,6 +361,8 @@ create_exception_catchall(debug_context_t *debug_context)
         cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
 
     debug_context->start_cfp = cfp;
+    if (catchall == Qfalse)
+        return;
 
     iseq = cfp->iseq;
     iseq->catch_table_size++;
@@ -399,6 +399,10 @@ create_exception_catchall(debug_context_t *debug_context)
         debug_context->catch_iseq.iseq_encoded[0] = bin_opt_call_c_function;
         debug_context->catch_iseq.iseq_encoded[1] = (VALUE)do_catchall;
     }
+    // TODO: add instructions
+    //   getdynamic #$!, 0
+    //   throw 0
+    // to remove need for "catchall called improperly" in do_catchall()
     debug_context->catch_iseq.iseq_size = 2;
     debug_context->catch_iseq.mark_ary = rb_ary_new();
     debug_context->catch_iseq.insn_info_table = &debug_context->catch_info_entry;
@@ -468,7 +472,6 @@ debug_context_create(VALUE thread)
     debug_context->stop_line = -1;
     debug_context->stop_frame = -1;
     debug_context->stop_reason = CTX_STOP_NONE;
-    debug_context->stack_len = STACK_SIZE_INCREMENT;
     debug_context->thread_id = ref2id(thread);
     debug_context->breakpoint = Qnil;
     debug_context->jump_pc = NULL;
@@ -481,7 +484,7 @@ debug_context_create(VALUE thread)
     debug_context->cur_cfp = NULL;
     debug_context->top_cfp = NULL;
     debug_context->catch_cfp = NULL;
-    debug_context->frames = NULL;
+    debug_context->saved_frames = NULL;
     debug_context->cfp = NULL;
     if(rb_obj_class(thread) == cDebugThread)
         CTX_FL_SET(debug_context, CTX_FL_IGNORE);
@@ -839,13 +842,21 @@ save_frames(debug_context_t *debug_context)
     debug_context->catch_table.errinfo = rb_errinfo();
 
     debug_context->catch_cfp = GET_THREAD()->cfp;
-    if (debug_context->frames != NULL)
-        free(debug_context->frames);
+    if (debug_context->saved_frames != NULL)
+        free(debug_context->saved_frames);
 
     size = sizeof(rb_control_frame_t) * 
         ((debug_context->cfp[debug_context->cfp_count-1] - debug_context->cfp[0]) + 1);
-    debug_context->frames = (rb_control_frame_t*)malloc(size);
-    memcpy(debug_context->frames, debug_context->cfp[0], size);
+    debug_context->saved_frames = (rb_control_frame_t*)malloc(size);
+    memcpy(debug_context->saved_frames, debug_context->cfp[0], size);
+
+    for (size = 0; size < debug_context->cfp_count; size++)
+    {
+        rb_binding_t *bind;
+        VALUE bindval = binding_alloc(rb_cBinding);
+        GetBindingPtr(bindval, bind);
+        bind->env = rb_vm_make_env_object(GET_THREAD(), debug_context->cfp[size]);
+    }
 }
 
 static void
@@ -879,8 +890,11 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         return;
     thread_context_lookup(th->self, &context, &debug_context, 1);
 
-    if (iseq && (self == rb_mKernel || self == mDebugger) && 
+    debug_context->catch_cfp = NULL;
+    if (iseq && (self == rb_mKernel || self == mDebugger || klass == cContext || klass == 0) && 
         (strcmp(RSTRING_PTR(iseq->name), "binding_n") == 0))
+        return;
+    if (iseq && (klass == cContext || klass == 0) && (strcmp(RSTRING_PTR(iseq->name), "frame_binding") == 0))
         return;
 
     if (debug_context->top_cfp && th->cfp >= debug_context->top_cfp)
@@ -1378,56 +1392,6 @@ debug_set_tracing(VALUE self, VALUE value)
     return value;
 }
 
-/*
- *   call-seq:
- *      Debugger.track_fame_args? -> bool
- *
- *   Returns +true+ if the debugger track frame argument values on calls.
- */
-static VALUE
-debug_track_frame_args(VALUE self)
-{
-    return track_frame_args;
-}
-
-/*
- *   call-seq:
- *      Debugger.track_frame_args = bool
- *
- *   Setting to +true+ will make the debugger save argument info on calls.
- */
-static VALUE
-debug_set_track_frame_args(VALUE self, VALUE value)
-{
-    track_frame_args = RTEST(value) ? Qtrue : Qfalse;
-    return value;
-}
-
-/*
- *   call-seq:
- *      Debugger.keep_frame_binding? -> bool
- *
- *   Returns +true+ if the debugger will collect frame bindings.
- */
-static VALUE
-debug_keep_frame_binding(VALUE self)
-{
-    return keep_frame_binding;
-}
-
-/*
- *   call-seq:
- *      Debugger.keep_frame_binding = bool
- *
- *   Setting to +true+ will make the debugger create frame bindings.
- */
-static VALUE
-debug_set_keep_frame_binding(VALUE self, VALUE value)
-{
-    keep_frame_binding = RTEST(value) ? Qtrue : Qfalse;
-    return value;
-}
-
 /* :nodoc: */
 static VALUE
 debug_debug(VALUE self)
@@ -1698,19 +1662,6 @@ optional_frame_position(int argc, VALUE *argv)
 
 /*
  *   call-seq:
- *      context.frame_args_info(frame_position=0) -> list 
-        if track_frame_args or nil otherwise
- *
- *   Deprecated.
- */
-static VALUE
-context_frame_args_info(int argc, VALUE *argv, VALUE self)
-{
-    return(Qnil);
-}
-
-/*
- *   call-seq:
  *      context.frame_binding(frame_position=0) -> binding
  *
  *   Returns frame's binding.
@@ -1730,13 +1681,7 @@ context_frame_binding(int argc, VALUE *argv, VALUE self)
     GetThreadPtr(context_thread_0(debug_context), th);
     cfp = GET_CFP;
 
-    //cfp = rb_vm_get_ruby_level_next_cfp(th, cfp);
     bindval = binding_alloc(rb_cBinding);
-
-    if (cfp == 0) {
-	rb_raise(rb_eRuntimeError, "Can't create Binding Object on top of Fiber.");
-    }
-
     GetBindingPtr(bindval, bind);
     bind->env = rb_vm_make_env_object(th, cfp);
     return bindval;
@@ -2382,7 +2327,6 @@ Init_context()
     rb_define_method(cContext, "tracing=", context_set_tracing, 1);
     rb_define_method(cContext, "ignored?", context_ignored, 0);
     rb_define_method(cContext, "frame_args", context_frame_args, -1);
-    rb_define_method(cContext, "frame_args_info", context_frame_args_info, -1);
     rb_define_method(cContext, "frame_binding", context_frame_binding, -1);
     rb_define_method(cContext, "frame_class", context_frame_class, -1);
     rb_define_method(cContext, "frame_file", context_frame_file, -1);
@@ -2493,14 +2437,6 @@ Init_ruby_debug()
     rb_define_module_function(mDebugger, "debug_load", debug_debug_load, -1);
     rb_define_module_function(mDebugger, "skip", debug_skip, 0);
     rb_define_module_function(mDebugger, "debug_at_exit", debug_at_exit, 0);
-    rb_define_module_function(mDebugger, "keep_frame_binding?", 
-                  debug_keep_frame_binding, 0);
-    rb_define_module_function(mDebugger, "keep_frame_binding=", 
-                  debug_set_keep_frame_binding, 1);
-    rb_define_module_function(mDebugger, "track_frame_args?", 
-                  debug_track_frame_args, 0);
-    rb_define_module_function(mDebugger, "track_frame_args=", 
-                  debug_set_track_frame_args, 1);
     rb_define_module_function(mDebugger, "debug", debug_debug, 0);
     rb_define_module_function(mDebugger, "debug=", debug_set_debug, 1);
     rb_define_module_function(mDebugger, "catchall", debug_catchall, 0);

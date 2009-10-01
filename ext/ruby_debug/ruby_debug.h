@@ -57,7 +57,7 @@ typedef struct {
     rb_control_frame_t *cur_cfp;
     rb_control_frame_t *top_cfp;
     rb_control_frame_t *catch_cfp;
-    rb_control_frame_t *frames;
+    rb_control_frame_t *saved_frames;
 //
     struct RData catch_rdata;
     struct rb_iseq_struct catch_iseq;
