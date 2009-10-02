@@ -64,7 +64,8 @@ typedef struct {
     struct rb_iseq_struct catch_iseq;
     struct iseq_insn_info_entry catch_info_entry;
     struct RNode catch_cref_stack;
-    VALUE iseq_insn[4];
+    VALUE iseq_insn[7];
+    VALUE local_table;
 //
     rb_control_frame_t **cfp;
     int cfp_count;

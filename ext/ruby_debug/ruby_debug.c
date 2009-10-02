@@ -13,6 +13,7 @@
 #define DEBUG_VERSION "0.12"
 
 #define GET_CFP     debug_context->cfp[check_frame_number(debug_context, frame)]
+#define ZFREE(ptr)  do { if(ptr != NULL) { free(ptr); ptr = NULL; } } while(0)
 
 #ifndef min
 #define min(x,y) ((x) < (y) ? (x) : (y))
@@ -81,6 +82,8 @@ typedef struct locked_thread_t {
 
 static locked_thread_t *locked_head = NULL;
 static locked_thread_t *locked_tail = NULL;
+
+const char *null_file_str = "<null file>";
 
 /* "Step", "Next" and "Finish" do their work by saving information
    about where to stop next. reset_stopping_points removes/resets this
@@ -336,15 +339,13 @@ FUNC_FASTCALL(do_catchall)(rb_thread_t *th, rb_control_frame_t *cfp)
     if (debug_context == NULL)
         rb_raise(rb_eRuntimeError, "Lost context in catchall");
     if (debug_context->saved_frames == NULL)
-        rb_raise(rb_eRuntimeError, "catchall called improperly"); // TODO: throw
+        return(cfp); /* re-throw exception */ 
 
     size = sizeof(rb_control_frame_t) *
         ((debug_context->cfp[debug_context->cfp_count-1] - debug_context->cfp[0]) + 1);
     memcpy(debug_context->cfp[0], debug_context->saved_frames, size);
 
-    free(debug_context->saved_frames);
-    debug_context->saved_frames = NULL;
-
+    ZFREE(debug_context->saved_frames);
     CTX_FL_SET(debug_context, CTX_FL_CATCHING);
     CTX_FL_UNSET(debug_context, CTX_FL_IN_EXCEPTION);
     th->cfp = debug_context->cfp[0];
@@ -381,34 +382,30 @@ create_exception_catchall(debug_context_t *debug_context)
 
     memset(&debug_context->catch_iseq, 0, sizeof(struct rb_iseq_struct));
     memset(&debug_context->catch_cref_stack, 0, sizeof(struct RNode));
-    debug_context->catch_rdata.basic.flags = 12; // ???
-    debug_context->catch_rdata.basic.klass = 0; // FIXME
+    debug_context->catch_rdata.basic.flags = RUBY_T_DATA;
+    debug_context->catch_rdata.basic.klass = 0;
     debug_context->catch_rdata.dmark = NULL;
     debug_context->catch_rdata.dfree = NULL;
     debug_context->catch_rdata.data = &debug_context->catch_iseq;
-    debug_context->catch_iseq.type = ISEQ_TYPE_METHOD;
+    debug_context->catch_iseq.type = ISEQ_TYPE_RESCUE;
     debug_context->catch_iseq.name = rb_str_new_cstr("(exception catcher)");
     debug_context->catch_iseq.filename = rb_str_new_cstr("(exception catcher)");
     debug_context->catch_iseq.iseq = debug_context->iseq_insn;
+    debug_context->catch_iseq.iseq_encoded = NULL;
     debug_context->catch_iseq.iseq[0] = BIN(opt_call_c_function);
     debug_context->catch_iseq.iseq[1] = (VALUE)do_catchall;
-    if (BIN(opt_call_c_function) == bin_opt_call_c_function)
-        debug_context->catch_iseq.iseq_encoded = debug_context->catch_iseq.iseq;
-    else
-    {
-        debug_context->catch_iseq.iseq_encoded = debug_context->iseq_insn + 2;
-        debug_context->catch_iseq.iseq_encoded[0] = bin_opt_call_c_function;
-        debug_context->catch_iseq.iseq_encoded[1] = (VALUE)do_catchall;
-    }
-    // TODO: add instructions
-    //   getdynamic #$!, 0
-    //   throw 0
-    // to remove need for "catchall called improperly" in do_catchall()
-    debug_context->catch_iseq.iseq_size = 2;
+    debug_context->catch_iseq.iseq[2] = BIN(getdynamic);
+    debug_context->catch_iseq.iseq[3] = 1; /* #$!, only value in local_table */
+    debug_context->catch_iseq.iseq[4] = 0;
+    debug_context->catch_iseq.iseq[5] = BIN(throw);
+    debug_context->catch_iseq.iseq[6] = 0;
+    debug_context->catch_iseq.iseq_size = sizeof(debug_context->iseq_insn) / sizeof(VALUE);
     debug_context->catch_iseq.mark_ary = rb_ary_new();
     debug_context->catch_iseq.insn_info_table = &debug_context->catch_info_entry;
     debug_context->catch_iseq.insn_info_size = 1;
     debug_context->catch_iseq.local_size = 1;
+    debug_context->catch_iseq.local_table = &debug_context->local_table;
+    debug_context->catch_iseq.local_table[0] = rb_intern("#$!");
     debug_context->catch_iseq.arg_simple = 1;
     debug_context->catch_iseq.arg_rest = -1;
     debug_context->catch_iseq.arg_block = -1;
@@ -427,6 +424,8 @@ create_exception_catchall(debug_context_t *debug_context)
     entry->end = ULONG_MAX;
     entry->cont = 0;
     entry->sp = 0;
+
+    rb_iseq_translate_threaded_code(&debug_context->catch_iseq);
 }
 
 /*
@@ -815,8 +814,7 @@ set_cfp(debug_context_t *debug_context)
     //if (cfp_count == debug_context->cfp_count && !has_changed)
       //  return;
 
-    if (debug_context->cfp != NULL)
-        free(debug_context->cfp);
+    ZFREE(debug_context->cfp);
     debug_context->cfp = (rb_control_frame_t**)malloc(sizeof(rb_control_frame_t) * cfp_count);
     debug_context->cfp_count = 0;
 
@@ -849,10 +847,8 @@ save_frames(debug_context_t *debug_context)
 
     debug_context->catch_table.mod_name = rb_obj_class(rb_errinfo());
     debug_context->catch_table.errinfo = rb_errinfo();
-
     debug_context->catch_cfp = GET_THREAD()->cfp;
-    if (debug_context->saved_frames != NULL)
-        free(debug_context->saved_frames);
+    ZFREE(debug_context->saved_frames);
 
     size = sizeof(rb_control_frame_t) * 
         ((debug_context->cfp[debug_context->cfp_count-1] - debug_context->cfp[0]) + 1);
@@ -868,11 +864,11 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     VALUE context;
     VALUE breakpoint = Qnil;
     debug_context_t *debug_context;
-    const char *file;
-    int line;
     int moved = 0;
     rb_thread_t *th;
     struct rb_iseq_struct *iseq;
+    const char *file;
+    int line = 0;
 #ifdef RUBY_VERSION_1_9_1
     NODE *node = NULL;
 #else
@@ -884,12 +880,11 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
 
     th   = GET_THREAD();
     iseq = th->cfp->iseq;
-    file = rb_sourcefile();
-    line = rb_sourceline();
+    file = iseq && RSTRING_PTR(iseq->filename) ? RSTRING_PTR(iseq->filename) : null_file_str;
 
     hook_count++;
 
-    if (((iseq == NULL) || (file == NULL)) && (event != RUBY_EVENT_RAISE))
+    if (((iseq == NULL) || (file == null_file_str)) && (event != RUBY_EVENT_RAISE))
         return;
     thread_context_lookup(th->self, &context, &debug_context, 1);
 
@@ -947,7 +942,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     /* only the current thread can proceed */
     locker = th->self;
 
-    if (iseq && iseq->type != ISEQ_TYPE_RESCUE)
+    if (iseq && iseq->type != ISEQ_TYPE_RESCUE && iseq->type != ISEQ_TYPE_ENSURE)
     {
         CTX_FL_UNSET(debug_context, CTX_FL_IN_EXCEPTION);
         if (debug_context->start_cfp == NULL || th->cfp > debug_context->start_cfp)
@@ -964,8 +959,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
             debug_context->old_iseq_catch[i].iseq->catch_table_size = debug_context->old_iseq_catch[i].catch_table_size;
             i++;
         }
-        free(debug_context->old_iseq_catch);
-        debug_context->old_iseq_catch = NULL;
+        ZFREE(debug_context->old_iseq_catch);
     }
 
     /* make sure all threads have event flag set so we'll get its events */
@@ -983,15 +977,13 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     if (CTX_FL_TEST(debug_context, CTX_FL_SKIPPED)) 
         goto cleanup;
 
-    if(debug == Qtrue)
-        fprintf(stderr, "%s:%d [%s] %s\n", file, line, get_event_name(event), rb_id2name(mid));
-
     debug_context->cur_cfp = th->cfp;
-    if (iseq && iseq->type != ISEQ_TYPE_RESCUE)
+    if (iseq && iseq->type != ISEQ_TYPE_RESCUE && iseq->type != ISEQ_TYPE_ENSURE)
         set_cfp(debug_context);
 
     /* There can be many event calls per line, but we only want
      *one* breakpoint per line. */
+    line = rb_sourceline();
     if(debug_context->last_line != line || debug_context->last_file == NULL ||
        strcmp(debug_context->last_file, file) != 0)
     {
@@ -1115,6 +1107,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         VALUE aclass;
         int i;
 
+        ZFREE(debug_context->saved_frames);
         if (debug_context->cfp_count == 0)
             break;
 
