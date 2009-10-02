@@ -346,6 +346,7 @@ FUNC_FASTCALL(do_catchall)(rb_thread_t *th, rb_control_frame_t *cfp)
     debug_context->saved_frames = NULL;
 
     CTX_FL_SET(debug_context, CTX_FL_CATCHING);
+    CTX_FL_UNSET(debug_context, CTX_FL_IN_EXCEPTION);
     th->cfp = debug_context->cfp[0];
     th->cfp->pc = th->cfp->iseq->iseq_encoded + find_prev_line_start(th->cfp);
     return(th->cfp);
@@ -838,6 +839,14 @@ save_frames(debug_context_t *debug_context)
     if (debug_context->cfp_count == 0)
         return;
 
+    for (size = 0; size < debug_context->cfp_count; size++)
+    {
+        rb_binding_t *bind;
+        VALUE bindval = binding_alloc(rb_cBinding);
+        GetBindingPtr(bindval, bind);
+        bind->env = rb_vm_make_env_object(GET_THREAD(), debug_context->cfp[size]);
+    }
+
     debug_context->catch_table.mod_name = rb_obj_class(rb_errinfo());
     debug_context->catch_table.errinfo = rb_errinfo();
 
@@ -850,13 +859,7 @@ save_frames(debug_context_t *debug_context)
     debug_context->saved_frames = (rb_control_frame_t*)malloc(size);
     memcpy(debug_context->saved_frames, debug_context->cfp[0], size);
 
-    for (size = 0; size < debug_context->cfp_count; size++)
-    {
-        rb_binding_t *bind;
-        VALUE bindval = binding_alloc(rb_cBinding);
-        GetBindingPtr(bindval, bind);
-        bind->env = rb_vm_make_env_object(GET_THREAD(), debug_context->cfp[size]);
-    }
+    CTX_FL_SET(debug_context, CTX_FL_IN_EXCEPTION);
 }
 
 static void
@@ -890,17 +893,14 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         return;
     thread_context_lookup(th->self, &context, &debug_context, 1);
 
+    if (debug_context->top_cfp && th->cfp >= debug_context->top_cfp)
+        return;
     debug_context->catch_cfp = NULL;
     if (iseq && (self == rb_mKernel || self == mDebugger || klass == cContext || klass == 0) && 
         (strcmp(RSTRING_PTR(iseq->name), "binding_n") == 0))
         return;
     if (iseq && (klass == cContext || klass == 0) && (strcmp(RSTRING_PTR(iseq->name), "frame_binding") == 0))
         return;
-
-    if (debug_context->top_cfp && th->cfp >= debug_context->top_cfp)
-        return;
-    if (debug_context->start_cfp == NULL || th->cfp > debug_context->start_cfp)
-        create_exception_catchall(debug_context);
 
     if ((event == RUBY_EVENT_LINE) || (event == RUBY_EVENT_CALL))
     {
@@ -947,6 +947,13 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     /* only the current thread can proceed */
     locker = th->self;
 
+    if (iseq && iseq->type != ISEQ_TYPE_RESCUE)
+    {
+        CTX_FL_UNSET(debug_context, CTX_FL_IN_EXCEPTION);
+        if (debug_context->start_cfp == NULL || th->cfp > debug_context->start_cfp)
+            create_exception_catchall(debug_context);
+    }
+
     /* restore catch tables removed for jump */
     if (debug_context->old_iseq_catch != NULL)
     {
@@ -980,7 +987,8 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         fprintf(stderr, "%s:%d [%s] %s\n", file, line, get_event_name(event), rb_id2name(mid));
 
     debug_context->cur_cfp = th->cfp;
-    set_cfp(debug_context);
+    if (iseq && iseq->type != ISEQ_TYPE_RESCUE)
+        set_cfp(debug_context);
 
     /* There can be many event calls per line, but we only want
      *one* breakpoint per line. */
