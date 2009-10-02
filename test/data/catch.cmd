@@ -16,3 +16,5 @@ c
 where
 jump 6
 cont
+jump 11
+cont

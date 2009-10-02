@@ -72,7 +72,6 @@ end
 options = OpenStruct.new(
   'annotate'    => false,
   'emacs'       => false,
-  'frame_bind'  => false,
   'no-quit'     => false,
   'no-stop'     => false,
   'nx'          => false,
@@ -100,9 +99,6 @@ EOB
   opts.on("--emacs-basic", "Activates basic Emacs mode") do 
     ENV['EMACS'] = '1'
     options.emacs = true
-  end
-  opts.on("--keep-frame-binding", "Keep frame bindings") do 
-    options.frame_bind = true
   end
   opts.on("-m", "--post-mortem", "Activate post-mortem mode") do 
     options.post_mortem = true
@@ -196,7 +192,6 @@ trap('INT') { Debugger.interrupt_last }
 
 # set options
 Debugger.wait_connection = false
-Debugger.keep_frame_binding = options.frame_bind
 
 # Add Debugger trace hook.
 Debugger.start

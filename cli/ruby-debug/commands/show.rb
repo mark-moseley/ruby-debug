@@ -115,9 +115,6 @@ module Debugger
           s << msg
         end
         return s.join("\n")
-      when /^keep-frame-bindings$/
-        on_off = Debugger.keep_frame_binding?
-        return "keep-frame-bindings is #{show_onoff(on_off)}."
       when /^linetrace$/
         on_off = Debugger.tracing
         return "line tracing is #{show_onoff(on_off)}."
@@ -133,9 +130,6 @@ module Debugger
         return "Number of source lines to list by default is #{listlines}."
       when /^port$/
         return "server port is #{Debugger::PORT}."
-      when /^post-mortem$/
-        on_off = Debugger.post_mortem?
-        return "post-mortem handling is #{show_onoff(on_off)}."
       when /^trace$/
         on_off = Command.settings[:stack_trace_on_error]
         return "Displaying stack trace is #{show_onoff(on_off)}."

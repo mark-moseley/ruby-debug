@@ -39,11 +39,11 @@ pm-catch.rb:6
 x = 6
 # cont
 6
-	./pm-catch.rb:10:in `<top (required)>'
-	tdebug.rb:61:in `debug_load'
-	tdebug.rb:61:in `debug_program'
-	tdebug.rb:252:in `<top (required)>'
-	../rdbg.rb:23:in `load'
-	../rdbg.rb:23:in `runner'
-	../rdbg.rb:32:in `<main>'
-Uncaught exception: RuntimeError
+Catchpoint at pm-catch.rb:10: `RuntimeError' (RuntimeError)
+	from ../rdbg.rb:32:in `<main>'
+pm-catch.rb:10
+raise RuntimeError
+# jump 11
+pm-catch.rb:11
+x = 3
+# cont

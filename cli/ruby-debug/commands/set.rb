@@ -36,16 +36,12 @@ ruby-debug."],
 "set history filename -- Set the filename in which to record the command history
 set history save -- Set saving of the history record on exit
 set history size -- Set the size of the command history"],
-       ['keep-frame-bindings', 1, true,
-        "Save frame binding on each call"],
        ['linetrace+', 10, true,
        "Set line execution tracing to show different lines"],
        ['linetrace', 3, true,
        "Set line execution tracing"],
        ['listsize', 3, false,
        "Set number of source lines to list by default"],
-#        ['post-mortem', 3, true,
-#        "Set whether we do post-mortem handling on an uncaught exception"],
        ['trace', 1, true,
         "Display stack trace when 'eval' raises exception"],
        ['width', 1, false,
@@ -113,15 +109,14 @@ set history size -- Set the size of the command history"],
                 if args[0]
                   arg = args[0].downcase.to_sym
                   case arg
-                  when :short, :last, :tracked
+                  when :short, :last
                     Command.settings[:callstyle] = arg
-                    Debugger.track_frame_args = arg == :tracked ? true : false
                     print "%s\n" % show_setting(try_subcmd.name)
                     return
                   end
                 end
                 print "Invalid call style #{arg}. Should be one of: " +
-                  "'short', 'last', or 'tracked'.\n"
+                  "'short' or 'last'.\n"
               when /^trace$/
                 Command.settings[:stack_trace_on_error] = set_on
               when /^fullpath$/
@@ -153,8 +148,6 @@ set history size -- Set the size of the command history"],
                   print "Need two parameters for 'set history'; got #{args.size}.\n" 
                   return
                 end
-              when /^keep-frame-bindings$/
-                Debugger.keep_frame_binding = set_on
               when /^linetrace\+$/
                 self.class.settings[:tracing_plus] = set_on
               when /^linetrace$/
@@ -166,15 +159,6 @@ set history size -- Set the size of the command history"],
                 else
                   return
                 end
-#               when /^post-mortem$/
-#                 unless Debugger.post_mortem? == set_on
-#                   if set_on
-#                     Debugger.post_mortem
-#                   else
-#                     errmsg "Can't turn off post-mortem once it is on.\n"
-#                     return
-#                   end
-#                 end
               when /^width$/
                 width = get_int(args[0], "Set width", 10, nil, 80)
                 if width

@@ -1,8 +1,0 @@
-K 10
-svn:ignore
-V 34
-.cvsignore
-ruby_debug.so
-Makefile
-
-END

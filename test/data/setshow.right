@@ -82,16 +82,17 @@ autoeval is off.
 *** Unknown command: "puts 'autoeval should not run this'".  Try "help".
 # #### Test 'callstyle'...
 # set callstyle
-Invalid call style . Should be one of: 'short', 'last', or 'tracked'.
+Invalid call style . Should be one of: 'short' or 'last'.
 Frame call-display style is last.
 # set callstyle short
 Frame call-display style is short.
 # set callstyle last
 Frame call-display style is last.
 # set callstyle tracked
-Frame call-display style is tracked.
+Invalid call style tracked. Should be one of: 'short' or 'last'.
+Frame call-display style is last.
 # set callstyle foo
-Invalid call style foo. Should be one of: 'short', 'last', or 'tracked'.
-Frame call-display style is tracked.
+Invalid call style foo. Should be one of: 'short' or 'last'.
+Frame call-display style is last.
 # 
 # 
