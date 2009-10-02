@@ -12,8 +12,6 @@ class TestRubyDebug < Test::Unit::TestCase
     assert(Debugger.started?, 
            'debugger should now be started.')
     assert_equal(__LINE__, Debugger.current_context.frame_line)
-    assert_equal(nil, Debugger.current_context.frame_args_info,
-                 'no frame args info.')
     assert_equal(Debugger.current_context.frame_file, 
                  Debugger.current_context.frame_file(0))
     assert_equal(File.basename(__FILE__),

@@ -101,9 +101,9 @@ end
 
 # Base GEM Specification
 base_spec = Gem::Specification.new do |spec|
-  spec.name = "ruby-debug-base"
+  spec.name = "ruby-debug-base19"
   
-  spec.homepage = "http://rubyforge.org/projects/ruby-debug/"
+  spec.homepage = "http://rubyforge.org/projects/ruby-debug19/"
   spec.summary = "Fast Ruby debugger - core component"
   spec.description = <<-EOF
 ruby-debug is a fast implementation of the standard Ruby debugger debug.rb.
@@ -112,19 +112,20 @@ provides support that front-ends can build on. It provides breakpoint
 handling, bindings for stack frames among other things.
 EOF
 
-  spec.version = RUBY_DEBUG_VERSION
+  spec.version = "0.12.0"
 
-  spec.author = "Kent Sibilev"
-  spec.email = "ksibilev@yahoo.com"
+  spec.authors = ["Kent Sibilev", "Mark Moseley"]
+  spec.email = "mark@fast-software.com"
   spec.platform = Gem::Platform::RUBY
   spec.require_path = "lib"
-  spec.extensions = ["ext/extconf.rb"]
+  spec.extensions = ["ext/ruby_debug/extconf.rb"]
   spec.files = BASE_FILES.to_a  
 
   spec.required_ruby_version = '>= 1.8.2'
   spec.date = Time.now
-  spec.rubyforge_project = 'ruby-debug'
-  spec.add_dependency('linecache', '>= 0.3')
+  spec.rubyforge_project = 'ruby-debug19'
+  spec.add_dependency('ruby_core_source', '>= 0.1.4')
+  spec.add_dependency('linecache19', '>= 0.5.11')
   
   spec.test_files = FileList[BASE_TEST_FILE_LIST]
   
@@ -134,18 +135,18 @@ EOF
 end
 
 cli_spec = Gem::Specification.new do |spec|
-  spec.name = "ruby-debug"
+  spec.name = "ruby-debug19"
   
-  spec.homepage = "http://rubyforge.org/projects/ruby-debug/"
+  spec.homepage = "http://rubyforge.org/projects/ruby-debug19/"
   spec.summary = "Command line interface (CLI) for ruby-debug-base"
   spec.description = <<-EOF
 A generic command line interface for ruby-debug.
 EOF
 
-  spec.version = RUBY_DEBUG_VERSION
+  spec.version = "0.11.7"
 
-  spec.author = "Kent Sibilev"
-  spec.email = "ksibilev@yahoo.com"
+  spec.authors = ["Kent Sibilev", "Mark Moseley"]
+  spec.email = "mark@fast-software.com"
   spec.platform = Gem::Platform::RUBY
   spec.require_path = "cli"
   spec.bindir = "bin"
@@ -155,8 +156,9 @@ EOF
   spec.required_ruby_version = '>= 1.8.2'
   spec.date = Time.now
   spec.rubyforge_project = 'ruby-debug'
-  spec.add_dependency('columnize', '>= 0.1')
-  spec.add_dependency('ruby-debug-base', "~> #{RUBY_DEBUG_VERSION}.0")
+  spec.add_dependency('columnize', '>= 0.3.1')
+  spec.add_dependency('linecache19', '>= 0.5.11')
+  spec.add_dependency('ruby-debug-base19', '>= 0.12.0')
   
   # FIXME: work out operational logistics for this
   # spec.test_files = FileList[CLI_TEST_FILE_LIST]
