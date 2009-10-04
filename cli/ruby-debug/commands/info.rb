@@ -307,10 +307,6 @@ item. If \'verbose\' is given then the entire stack frame is shown.'],
         print "It stopped after stepping, next'ing or initial start.\n"
       when :breakpoint
         print("It stopped at a breakpoint.\n")
-      when :catchpoint
-        print("It stopped at a catchpoint.\n")
-      when :catchpoint
-        print("It stopped at a catchpoint.\n")
       else
         print "unknown reason: %s\n" % @state.context.stop_reason.to_s
       end
