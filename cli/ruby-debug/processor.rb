@@ -275,9 +275,9 @@ module Debugger
           cmd.execute
         end
       else
-        unknown_cmd = commands.find{|cmd| cmd.class.unknown }
+        unknown_cmd = commands.find{ |c| c.class.unknown }
         if unknown_cmd
-            unknown_cmd.execute
+          unknown_cmd.execute
         else
           errmsg "Unknown command: \"#{input}\".  Try \"help\".\n"
         end

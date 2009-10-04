@@ -133,8 +133,8 @@ item. If \'verbose\' is given then the entire stack frame is shown.'],
       unless Debugger.breakpoints.empty?
         brkpts = Debugger.breakpoints.sort_by{|b| b.id}
         unless args.empty?
-          a = args.map{|a| a.to_i}
-          brkpts = brkpts.select{|b| a.member?(b.id)}
+          indices = args.map{|a| a.to_i}
+          brkpts = brkpts.select{|b| indices.member?(b.id)}
           if brkpts.empty?
             errmsg "No breakpoints found among list given.\n"
             return
@@ -307,10 +307,6 @@ item. If \'verbose\' is given then the entire stack frame is shown.'],
         print "It stopped after stepping, next'ing or initial start.\n"
       when :breakpoint
         print("It stopped at a breakpoint.\n")
-      when :catchpoint
-        print("It stopped at a catchpoint.\n")
-      when :catchpoint
-        print("It stopped at a catchpoint.\n")
       else
         print "unknown reason: %s\n" % @state.context.stop_reason.to_s
       end
