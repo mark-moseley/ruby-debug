@@ -3,8 +3,8 @@ module Debugger
   module EnableDisableFunctions # :nodoc:
     def enable_disable_breakpoints(is_enable, args)
       breakpoints = Debugger.breakpoints.sort_by{|b| b.id }
-      largest = breakpoints.inject(0) do |largest, b| 
-        largest = b.id if b.id > largest
+      largest = breakpoints.inject(0) do |tally, b|
+        tally = b.id if b.id > tally
       end
       if 0 == largest
         errmsg "No breakpoints have been set.\n"
