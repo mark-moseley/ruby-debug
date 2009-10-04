@@ -45,7 +45,7 @@ module Debugger
           Send [signal] to Process.pid
 Equivalent of Process.kill(Process.pid)
          }
-     end
+      end
     end
   end
 end
