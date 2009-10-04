@@ -133,8 +133,8 @@ item. If \'verbose\' is given then the entire stack frame is shown.'],
       unless Debugger.breakpoints.empty?
         brkpts = Debugger.breakpoints.sort_by{|b| b.id}
         unless args.empty?
-          a = args.map{|a| a.to_i}
-          brkpts = brkpts.select{|b| a.member?(b.id)}
+          indices = args.map{|a| a.to_i}
+          brkpts = brkpts.select{|b| indices.member?(b.id)}
           if brkpts.empty?
             errmsg "No breakpoints found among list given.\n"
             return
