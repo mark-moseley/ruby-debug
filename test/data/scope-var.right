@@ -175,7 +175,6 @@ self = main
     #1 Object.scope2 at line scope-var.rb:11
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #3 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 i = 0
@@ -192,7 +191,6 @@ j = i * 10
     #1 Object.scope2 at line scope-var.rb:11
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #3 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 i = 0
@@ -210,7 +208,6 @@ scope3
     #2 Object.scope2 at line scope-var.rb:11
     #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #4 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 s3_var1 = nil
@@ -228,7 +225,6 @@ s3_var1 = 789
     #2 Object.scope2 at line scope-var.rb:11
     #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #4 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 s3_var1 = 789
@@ -246,7 +242,6 @@ s3_var2 = "scope3"
     #2 Object.scope2 at line scope-var.rb:11
     #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #4 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 s3_var1 = 789
@@ -265,7 +260,6 @@ puts eval("s3_var1", Debugger.current_context.frame_binding(0))
     #3 Object.scope2 at line scope-var.rb:11
     #4 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #5 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 self = main
@@ -282,7 +276,6 @@ self = main
     #2 Object.scope2 at line scope-var.rb:11
     #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #4 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 s3_var1 = 789
@@ -301,7 +294,6 @@ puts eval("i", Debugger.current_context.frame_binding(1))
     #3 Object.scope2 at line scope-var.rb:11
     #4 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #5 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 self = main
@@ -318,7 +310,6 @@ self = main
     #2 Object.scope2 at line scope-var.rb:11
     #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #4 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 s3_var1 = 789
@@ -337,7 +328,6 @@ puts eval("j", Debugger.current_context.frame_binding(1))
     #3 Object.scope2 at line scope-var.rb:11
     #4 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #5 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 self = main
@@ -354,7 +344,6 @@ self = main
     #2 Object.scope2 at line scope-var.rb:11
     #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #4 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 s3_var1 = 789
@@ -373,7 +362,6 @@ puts eval("s2_var1", Debugger.current_context.frame_binding(2))
     #3 Object.scope2 at line scope-var.rb:11
     #4 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #5 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 self = main
@@ -390,7 +378,6 @@ self = main
     #2 Object.scope2 at line scope-var.rb:11
     #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #4 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 s3_var1 = 789
@@ -409,7 +396,6 @@ puts eval("s1_var1", Debugger.current_context.frame_binding(3))
     #3 Object.scope2 at line scope-var.rb:11
     #4 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #5 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 self = main
@@ -426,7 +412,6 @@ self = main
     #2 Object.scope2 at line scope-var.rb:11
     #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #4 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 s3_var1 = 789
@@ -445,7 +430,6 @@ puts eval("s0_var1", Debugger.current_context.frame_binding(4))
     #3 Object.scope2 at line scope-var.rb:11
     #4 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #5 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 self = main
@@ -461,7 +445,6 @@ self = main
     #1 Object.scope2 at line scope-var.rb:11
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #3 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 i = 1
@@ -478,7 +461,6 @@ j = i * 10
     #1 Object.scope2 at line scope-var.rb:11
     #2 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #3 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 i = 1
@@ -496,7 +478,6 @@ scope3
     #2 Object.scope2 at line scope-var.rb:11
     #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #4 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 s3_var1 = nil
@@ -514,7 +495,6 @@ s3_var1 = 789
     #2 Object.scope2 at line scope-var.rb:11
     #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #4 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 s3_var1 = 789
@@ -532,7 +512,6 @@ s3_var2 = "scope3"
     #2 Object.scope2 at line scope-var.rb:11
     #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #4 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 s3_var1 = 789
@@ -551,7 +530,6 @@ puts eval("s3_var1", Debugger.current_context.frame_binding(0))
     #3 Object.scope2 at line scope-var.rb:11
     #4 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #5 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 self = main
@@ -568,7 +546,6 @@ self = main
     #2 Object.scope2 at line scope-var.rb:11
     #3 Object.scope1(arg1#Fixnum, arg2#Fixnum) at line scope-var.rb:5
     #4 at line scope-var.rb:29
-Warning: saved frames may be incomplete; compare with caller(0).
 
 variables
 s3_var1 = 789
