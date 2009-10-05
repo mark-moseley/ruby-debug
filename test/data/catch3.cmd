@@ -6,5 +6,6 @@ set autoeval off
 set basename on
 c
 w
-jump +1
+p $var
+jump +4
 c

@@ -33,7 +33,7 @@ typedef struct {
 static VALUE hook_off           = Qtrue;
 static VALUE tracing            = Qfalse;
 static VALUE locker             = Qnil;
-static VALUE debug              = Qfalse;
+static VALUE debug_flag         = Qfalse;
 static VALUE catchall           = Qtrue;
 static VALUE skip_next_exception= Qfalse;
 
@@ -45,8 +45,8 @@ VALUE rdebug_threads_tbl = Qnil; /* Context for each of the threads */
 VALUE mDebugger;                 /* Ruby Debugger Module object */
 
 static VALUE bin_opt_call_c_function;
-static VALUE bin_putnil;
-static VALUE bin_leave;
+static VALUE bin_getdynamic;
+static VALUE bin_throw;
 static VALUE cThreadsTable;
 static VALUE cContext;
 static VALUE cDebugThread;
@@ -113,6 +113,13 @@ get_event_name(rb_event_flag_t event)
   }
 }
 
+static void 
+debug_runtime_error(debug_context_t *debug_context, const char *err)
+{
+    if (debug_context != NULL) CTX_FL_SET(debug_context, CTX_FL_IGNORE);
+    rb_raise(rb_eRuntimeError, err);
+}
+
 inline static void
 reset_stepping_stop_points(debug_context_t *debug_context)
 {
@@ -175,7 +182,7 @@ id2ref_unprotected(VALUE id)
 static VALUE
 id2ref_error()
 {
-    if(debug == Qtrue)
+    if(debug_flag == Qtrue)
         rb_p(rb_errinfo());
     return Qnil;
 }
@@ -328,6 +335,97 @@ check_thread_contexts()
     st_foreach(threads_table->tbl, threads_table_check_i, 0);
 }
 
+static struct iseq_catch_table_entry *
+create_catch_table(debug_context_t *debug_context, unsigned long cont)
+{
+    struct iseq_catch_table_entry *catch_table = &debug_context->catch_table.tmp_catch_table;
+
+    GET_THREAD()->parse_in_eval++;
+    GET_THREAD()->mild_compile_error++;
+    /* compiling with option Qfalse (no options) prevents debug hook calls during this catch routine
+     */
+    catch_table->iseq = rb_iseq_compile_with_option(
+        rb_str_new_cstr(""), rb_str_new_cstr("(exception catcher)"), INT2FIX(1), Qfalse);
+    GET_THREAD()->mild_compile_error--;
+    GET_THREAD()->parse_in_eval--;
+
+    catch_table->type = CATCH_TYPE_RESCUE;
+    catch_table->start = 0;
+    catch_table->end = ULONG_MAX;
+    catch_table->cont = cont;
+    catch_table->sp = 0;
+
+    return(catch_table);
+}
+
+static rb_control_frame_t *
+FUNC_FASTCALL(do_jump)(rb_thread_t *th, rb_control_frame_t *cfp)
+{
+    VALUE context;
+    debug_context_t *debug_context;
+    rb_control_frame_t *jump_cfp;
+    VALUE *jump_pc;
+
+    thread_context_lookup(th->self, &context, &debug_context, 0);
+    if (debug_context == NULL)
+        debug_runtime_error(NULL, "Lost context in jump");
+    cfp->pc[-2] = debug_context->saved_jump_ins[0];
+    cfp->pc[-1] = debug_context->saved_jump_ins[1];
+
+    if ((debug_context->jump_pc < debug_context->jump_cfp->iseq->iseq_encoded) || 
+        (debug_context->jump_pc >= debug_context->jump_cfp->iseq->iseq_encoded + debug_context->jump_cfp->iseq->iseq_size))
+        debug_runtime_error(debug_context, "Invalid jump PC target");
+
+    jump_cfp = debug_context->jump_cfp;
+    jump_pc = debug_context->jump_pc;
+    debug_context->jump_pc = NULL;
+    debug_context->jump_cfp = NULL;
+    if (!CTX_FL_TEST(debug_context, CTX_FL_EXCEPTION_TEST))
+    {
+        debug_context->last_line = 0;
+        debug_context->last_file = NULL;
+        debug_context->stop_next = 1;
+    }
+
+    if (cfp < jump_cfp)
+    {
+        /* save all intermediate-frame catch tables
+           +1 for target frame
+           +1 for array terminator
+         */
+        int frames = jump_cfp - cfp + 2;
+        debug_context->old_iseq_catch = (iseq_catch_t*)malloc(frames * sizeof(iseq_catch_t));
+        MEMZERO(debug_context->old_iseq_catch, iseq_catch_t, frames);
+        frames = 0;
+        do
+        {
+            if (cfp->iseq != NULL)
+            {
+                debug_context->old_iseq_catch[frames].iseq = cfp->iseq;
+                debug_context->old_iseq_catch[frames].catch_table = cfp->iseq->catch_table;
+                debug_context->old_iseq_catch[frames].catch_table_size = cfp->iseq->catch_table_size;
+                cfp->iseq->catch_table = NULL;
+                cfp->iseq->catch_table_size = 0;
+
+                frames++;
+            }
+            cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
+        } while (cfp <= jump_cfp);
+
+        jump_cfp->iseq->catch_table_size = 1;
+        jump_cfp->iseq->catch_table = 
+            create_catch_table(debug_context, jump_pc - jump_cfp->iseq->iseq_encoded);
+        jump_cfp->iseq->catch_table->sp = -1;
+
+        JUMP_TAG(TAG_RAISE);
+    }
+    else if (cfp > jump_cfp)
+        debug_runtime_error(debug_context, "Invalid jump frame target");
+
+    cfp->pc = jump_pc;
+    return(cfp);
+}
+
 static rb_control_frame_t *
 FUNC_FASTCALL(do_catchall)(rb_thread_t *th, rb_control_frame_t *cfp)
 {
@@ -337,17 +435,35 @@ FUNC_FASTCALL(do_catchall)(rb_thread_t *th, rb_control_frame_t *cfp)
 
     thread_context_lookup(th->self, &context, &debug_context, 0);
     if (debug_context == NULL)
-        rb_raise(rb_eRuntimeError, "Lost context in catchall");
+        debug_runtime_error(NULL, "Lost context in catchall");
     if (debug_context->saved_frames == NULL)
         return(cfp); /* re-throw exception */ 
+
+    if (CTX_FL_TEST(debug_context, CTX_FL_RETHROW))
+    {
+        cfp->pc[-2] = debug_context->saved_jump_ins[0];
+        cfp->pc[-1] = debug_context->saved_jump_ins[1];
+    }
+    else
+    {
+        CTX_FL_SET(debug_context, CTX_FL_CATCHING);
+        CTX_FL_UNSET(debug_context, CTX_FL_EXCEPTION_TEST);
+    }
+
+    /* restore the call frame state */
+    ZFREE(debug_context->cfp);
+    debug_context->cfp_count = debug_context->saved_cfp_count;
+    debug_context->saved_cfp_count = 0;
+    size = sizeof(rb_control_frame_t*) * debug_context->cfp_count;
+    debug_context->cfp = (rb_control_frame_t**)malloc(size);
+    memcpy(debug_context->cfp, debug_context->saved_cfp, size);
+    ZFREE(debug_context->saved_cfp);
 
     size = sizeof(rb_control_frame_t) *
         ((debug_context->cfp[debug_context->cfp_count-1] - debug_context->cfp[0]) + 1);
     memcpy(debug_context->cfp[0], debug_context->saved_frames, size);
 
     ZFREE(debug_context->saved_frames);
-    CTX_FL_SET(debug_context, CTX_FL_CATCHING);
-    CTX_FL_UNSET(debug_context, CTX_FL_IN_EXCEPTION);
     th->cfp = debug_context->cfp[0];
     th->cfp->pc = th->cfp->iseq->iseq_encoded + find_prev_line_start(th->cfp);
     return(th->cfp);
@@ -485,12 +601,13 @@ debug_context_create(VALUE thread)
     debug_context->top_cfp = NULL;
     debug_context->catch_cfp = NULL;
     debug_context->saved_frames = NULL;
+    debug_context->saved_cfp = NULL;
+    debug_context->saved_cfp_count = 0;
     debug_context->cfp = NULL;
     if(rb_obj_class(thread) == cDebugThread)
         CTX_FL_SET(debug_context, CTX_FL_IGNORE);
     return Data_Wrap_Struct(cContext, debug_context_mark, debug_context_free, debug_context);
 }
-
 
 static void
 thread_context_lookup(VALUE thread, VALUE *context, debug_context_t **debug_context, int create)
@@ -666,29 +783,6 @@ call_at_line_check(VALUE self, debug_context_t *debug_context, VALUE breakpoint,
     call_at_line(context, debug_context, rb_str_new2(file), INT2FIX(line));
 }
 
-static struct iseq_catch_table_entry *
-create_catch_table(debug_context_t *debug_context, unsigned long cont)
-{
-    struct iseq_catch_table_entry *catch_table = &debug_context->catch_table.tmp_catch_table;
-
-    GET_THREAD()->parse_in_eval++;
-    GET_THREAD()->mild_compile_error++;
-    /* compiling with option Qfalse (no options) prevents debug hook calls during this catch routine
-     */
-    catch_table->iseq = rb_iseq_compile_with_option(
-        rb_str_new_cstr(""), rb_str_new_cstr("(exception catcher)"), INT2FIX(1), Qfalse);
-    GET_THREAD()->mild_compile_error--;
-    GET_THREAD()->parse_in_eval--;
-
-    catch_table->type = CATCH_TYPE_RESCUE;
-    catch_table->start = 0;
-    catch_table->end = ULONG_MAX;
-    catch_table->cont = cont;
-    catch_table->sp = 0;
-
-    return(catch_table);
-}
-
 static int
 set_thread_event_flag_i(st_data_t key, st_data_t val, st_data_t flag)
 {
@@ -735,7 +829,7 @@ FUNC_FASTCALL(do_catch)(rb_thread_t *th, rb_control_frame_t *cfp)
 
     thread_context_lookup(th->self, &context, &debug_context, 0);
     if (debug_context == NULL)
-        rb_raise(rb_eRuntimeError, "Lost context in catch");
+        debug_runtime_error(NULL, "Lost context in catch");
     cfp->pc[-2] = debug_context->saved_jump_ins[0];
     cfp->pc[-1] = debug_context->saved_jump_ins[1];
 
@@ -837,6 +931,7 @@ save_frames(debug_context_t *debug_context)
     if (debug_context->cfp_count == 0)
         return;
 
+    /* save the entire call frame state */
     for (size = 0; size < debug_context->cfp_count; size++)
     {
         rb_binding_t *bind;
@@ -847,6 +942,7 @@ save_frames(debug_context_t *debug_context)
 
     debug_context->catch_table.mod_name = rb_obj_class(rb_errinfo());
     debug_context->catch_table.errinfo = rb_errinfo();
+
     debug_context->catch_cfp = GET_THREAD()->cfp;
     ZFREE(debug_context->saved_frames);
 
@@ -855,7 +951,13 @@ save_frames(debug_context_t *debug_context)
     debug_context->saved_frames = (rb_control_frame_t*)malloc(size);
     memcpy(debug_context->saved_frames, debug_context->cfp[0], size);
 
-    CTX_FL_SET(debug_context, CTX_FL_IN_EXCEPTION);
+    ZFREE(debug_context->saved_cfp);
+    size = sizeof(rb_control_frame_t*) * debug_context->cfp_count;
+    debug_context->saved_cfp = (rb_control_frame_t**)malloc(size);
+    memcpy(debug_context->saved_cfp, debug_context->cfp, size);
+    debug_context->saved_cfp_count = debug_context->cfp_count;
+
+    CTX_FL_SET(debug_context, CTX_FL_EXCEPTION_TEST);
 }
 
 static int
@@ -897,9 +999,12 @@ handle_raise_event(rb_thread_t *th, debug_context_t *debug_context)
     int i;
 
     ZFREE(debug_context->saved_frames);
-    if (debug_context->cfp_count == 0) //|| 
+    if (CTX_FL_TEST(debug_context, CTX_FL_RETHROW))
+    {
+        CTX_FL_UNSET(debug_context, CTX_FL_RETHROW);
         return(0);
-    if (!try_thread_lock(th, debug_context))
+    }
+    if (debug_context->cfp_count == 0 || !try_thread_lock(th, debug_context))
         return(0);
 
     if (skip_next_exception == Qtrue)
@@ -938,7 +1043,7 @@ handle_raise_event(rb_thread_t *th, debug_context_t *debug_context)
         if (hit_count != Qnil)
         {
             if (!catch_exception(debug_context, mod_name))
-                rb_raise(rb_eRuntimeError, "Could not catch exception");
+                debug_runtime_error(debug_context, "Could not catch exception");
             return(1);
         }
     }
@@ -987,10 +1092,47 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     if (iseq == NULL || th->cfp->pc == NULL)
         return;
 
-    if ((self == rb_mKernel || self == mDebugger || klass == cContext || klass == 0) &&
-        iseq->defined_method_id == id_binding_n)
+    if (event == RUBY_EVENT_LINE && CTX_FL_TEST(debug_context, CTX_FL_EXCEPTION_TEST))
+    {
+        if (iseq->type == ISEQ_TYPE_ENSURE)
+        {
+            /* don't allow "ensure" blocks to execute yet: jump out of here by re-throwing exception */
+            VALUE *jump_pc = 
+                iseq->iseq_encoded + iseq->iseq_size - insn_len(BIN(getdynamic)) - insn_len(BIN(throw));
+                
+            if (jump_pc[0] != bin_getdynamic || jump_pc[insn_len(BIN(getdynamic))] != bin_throw)
+                debug_runtime_error(debug_context, "Unexpected instructions in ENSURE block");
+
+            debug_context->jump_cfp = th->cfp;
+            debug_context->jump_pc = jump_pc;
+            debug_context->saved_jump_ins[0] = th->cfp->pc[0];
+            debug_context->saved_jump_ins[1] = th->cfp->pc[1];
+            th->cfp->pc[0] = bin_opt_call_c_function;
+            th->cfp->pc[1] = (VALUE)do_jump;
+            CTX_FL_SET(debug_context, CTX_FL_ENSURE_SKIPPED);
+            return;
+        }
+        else if (iseq->type == ISEQ_TYPE_RESCUE)
+        {
+            CTX_FL_UNSET(debug_context, CTX_FL_EXCEPTION_TEST);
+            if (CTX_FL_TEST(debug_context, CTX_FL_ENSURE_SKIPPED))
+            {
+                /* exception was caught by the code; need to start the whole thing over */
+                debug_context->saved_jump_ins[0] = th->cfp->pc[0];
+                debug_context->saved_jump_ins[1] = th->cfp->pc[1];
+                th->cfp->pc[0] = bin_opt_call_c_function;
+                th->cfp->pc[1] = (VALUE)do_catchall;
+                CTX_FL_UNSET(debug_context, CTX_FL_ENSURE_SKIPPED);
+                CTX_FL_SET(debug_context, CTX_FL_RETHROW);
+                return;
+            }
+        }
+    }
+
+    if (iseq->defined_method_id == id_binding_n &&
+        (self == rb_mKernel || self == mDebugger || klass == cContext || klass == 0))
         return;
-    if ((klass == cContext || klass == 0) && iseq->defined_method_id == id_frame_binding)
+    if (iseq->defined_method_id == id_frame_binding && (klass == cContext || klass == 0))
         return;
 
     if (event == RUBY_EVENT_LINE || event == RUBY_EVENT_CALL)
@@ -1006,7 +1148,6 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
 
     if (iseq->type != ISEQ_TYPE_RESCUE && iseq->type != ISEQ_TYPE_ENSURE)
     {
-        CTX_FL_UNSET(debug_context, CTX_FL_IN_EXCEPTION);
         if (debug_context->start_cfp == NULL || th->cfp > debug_context->start_cfp)
             create_exception_catchall(debug_context);
     }
@@ -1040,7 +1181,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         goto cleanup;
 
     debug_context->cur_cfp = th->cfp;
-    if (iseq && iseq->type != ISEQ_TYPE_RESCUE && iseq->type != ISEQ_TYPE_ENSURE)
+    if (iseq->type != ISEQ_TYPE_RESCUE && iseq->type != ISEQ_TYPE_ENSURE)
         set_cfp(debug_context);
 
     /* There can be many event calls per line, but we only want
@@ -1397,14 +1538,14 @@ debug_set_tracing(VALUE self, VALUE value)
 static VALUE
 debug_debug(VALUE self)
 {
-    return debug;
+    return debug_flag;
 }
 
 /* :nodoc: */
 static VALUE
 debug_set_debug(VALUE self, VALUE value)
 {
-    debug = RTEST(value) ? Qtrue : Qfalse;
+    debug_flag = RTEST(value) ? Qtrue : Qfalse;
     return value;
 }
 
@@ -2155,71 +2296,6 @@ context_stop_reason(VALUE self)
     return ID2SYM(rb_intern(sym_name));
 }
 
-static rb_control_frame_t *
-FUNC_FASTCALL(do_jump)(rb_thread_t *th, rb_control_frame_t *cfp)
-{
-    VALUE context;
-    debug_context_t *debug_context;
-    rb_control_frame_t *jump_cfp;
-    VALUE *jump_pc;
-
-    thread_context_lookup(th->self, &context, &debug_context, 0);
-    if (debug_context == NULL)
-        rb_raise(rb_eRuntimeError, "Lost context in jump");
-    cfp->pc[-2] = debug_context->saved_jump_ins[0];
-    cfp->pc[-1] = debug_context->saved_jump_ins[1];
-
-    if ((debug_context->jump_pc < debug_context->jump_cfp->iseq->iseq_encoded) || 
-        (debug_context->jump_pc >= debug_context->jump_cfp->iseq->iseq_encoded + debug_context->jump_cfp->iseq->iseq_size))
-        rb_raise(rb_eRuntimeError, "Invalid jump PC target");
-
-    jump_cfp = debug_context->jump_cfp;
-    jump_pc = debug_context->jump_pc;
-    debug_context->jump_pc = NULL;
-    debug_context->jump_cfp = NULL;
-    debug_context->last_line = 0;
-    debug_context->last_file = NULL;
-    debug_context->stop_next = 1;
-
-    if (cfp < jump_cfp)
-    {
-        /* save all intermediate-frame catch tables
-           +1 for target frame
-           +1 for array terminator
-         */
-        int frames = jump_cfp - cfp + 2;
-        debug_context->old_iseq_catch = (iseq_catch_t*)malloc(frames * sizeof(iseq_catch_t));
-        MEMZERO(debug_context->old_iseq_catch, iseq_catch_t, frames);
-        frames = 0;
-        do
-        {
-            if (cfp->iseq != NULL)
-            {
-                debug_context->old_iseq_catch[frames].iseq = cfp->iseq;
-                debug_context->old_iseq_catch[frames].catch_table = cfp->iseq->catch_table;
-                debug_context->old_iseq_catch[frames].catch_table_size = cfp->iseq->catch_table_size;
-                cfp->iseq->catch_table = NULL;
-                cfp->iseq->catch_table_size = 0;
-
-                frames++;
-            }
-            cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
-        } while (cfp <= jump_cfp);
-
-        jump_cfp->iseq->catch_table_size = 1;
-        jump_cfp->iseq->catch_table = 
-            create_catch_table(debug_context, jump_pc - jump_cfp->iseq->iseq_encoded);
-        jump_cfp->iseq->catch_table->sp = -1;
-
-        JUMP_TAG(TAG_RAISE);
-    }
-    else if (cfp > jump_cfp)
-        rb_raise(rb_eRuntimeError, "Invalid jump frame target");
-
-    cfp->pc = jump_pc;
-    return(cfp);
-}
-
 /*
  *   call-seq:
  *      context.jump(line, file) -> bool
@@ -2410,8 +2486,8 @@ void
 Init_ruby_debug()
 {
     TRANSLATE_INSNS(opt_call_c_function);
-    TRANSLATE_INSNS(putnil);
-    TRANSLATE_INSNS(leave);
+    TRANSLATE_INSNS(getdynamic);
+    TRANSLATE_INSNS(throw);
 
     mDebugger = rb_define_module("Debugger");
     rb_define_const(mDebugger, "VERSION", rb_str_new2(DEBUG_VERSION));

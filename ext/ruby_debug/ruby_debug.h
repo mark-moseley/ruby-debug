@@ -3,17 +3,19 @@ enum ctx_stop_reason {CTX_STOP_NONE, CTX_STOP_STEP, CTX_STOP_BREAKPOINT,
 		      CTX_STOP_CATCHPOINT};
 
 /* Context flags */
-#define CTX_FL_SUSPEND      (1<<1)
-#define CTX_FL_TRACING      (1<<2)
-#define CTX_FL_SKIPPED      (1<<3)
-#define CTX_FL_IGNORE       (1<<4)
-#define CTX_FL_DEAD         (1<<5)
-#define CTX_FL_WAS_RUNNING  (1<<6)
-#define CTX_FL_ENABLE_BKPT  (1<<7)
-#define CTX_FL_STEPPED      (1<<8)
-#define CTX_FL_FORCE_MOVE   (1<<9)
-#define CTX_FL_CATCHING     (1<<10)
-#define CTX_FL_IN_EXCEPTION (1<<11)
+#define CTX_FL_SUSPEND        (1<<1)
+#define CTX_FL_TRACING        (1<<2)
+#define CTX_FL_SKIPPED        (1<<3)
+#define CTX_FL_IGNORE         (1<<4)
+#define CTX_FL_DEAD           (1<<5)
+#define CTX_FL_WAS_RUNNING    (1<<6)
+#define CTX_FL_ENABLE_BKPT    (1<<7)
+#define CTX_FL_STEPPED        (1<<8)
+#define CTX_FL_FORCE_MOVE     (1<<9)
+#define CTX_FL_CATCHING       (1<<10)
+#define CTX_FL_EXCEPTION_TEST (1<<11)
+#define CTX_FL_ENSURE_SKIPPED (1<<12)
+#define CTX_FL_RETHROW        (1<<13)
 
 #define CTX_FL_TEST(c,f)  ((c)->flags & (f))
 #define CTX_FL_SET(c,f)   do { (c)->flags |= (f); } while (0)
@@ -59,6 +61,8 @@ typedef struct {
     rb_control_frame_t *top_cfp;
     rb_control_frame_t *catch_cfp;
     rb_control_frame_t *saved_frames;
+    rb_control_frame_t **saved_cfp;
+    int saved_cfp_count;
 //
     struct RData catch_rdata;
     struct rb_iseq_struct catch_iseq;

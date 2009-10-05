@@ -1,0 +1,37 @@
+pm-catch3.rb:3
+def get_exception(arg)
+# # ***************************************************
+# # Test catch
+# # ***************************************************
+# set debuggertesting on
+Currently testing the debugger is on.
+# set autoeval off
+autoeval is off.
+# set basename on
+basename is on.
+# c
+divide by zero
+start1:foo begin:bar begin:foo ensure:zero_div rescue:
+Catchpoint at pm-catch3.rb:15: `divided by 0' (ZeroDivisionError)
+	from tdebug.rb:61:in `debug_program'
+	from tdebug.rb:247:in `<top (required)>'
+	from ../rdbg.rb:23:in `load'
+	from ../rdbg.rb:23:in `runner'
+	from ../rdbg.rb:32:in `<main>'
+pm-catch3.rb:15
+1/0 if arg
+# w
+--> #0 Object.bar(arg#Fixnum) at line pm-catch3.rb:15
+    #1 at line pm-catch3.rb:34
+    #2 Object.foo(arg#Fixnum) at line pm-catch3.rb:24
+    #3 Object.zero_div(arg#Fixnum) at line pm-catch3.rb:34
+    #4 at line pm-catch3.rb:45
+# p $var
+"start2:foo begin:bar begin:"
+# jump +4
+pm-catch3.rb:19
+$var = $var + "bar end:"
+# c
+7
+start2:foo begin:bar begin:bar end:foo end:foo ensure:
+done

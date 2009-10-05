@@ -15,6 +15,9 @@ RUBY_DEBUG_VERSION = open("ext/ruby_debug/ruby_debug.c") do |f|
   f.grep(/^#define DEBUG_VERSION/).first[/"(.+)"/,1]
 end
 
+RUBY_DEBUG_TEENY = ".0"
+RUBY_DEBUG_BASE_TEENY = ".0"
+
 COMMON_FILES = FileList[
   'AUTHORS',
   'CHANGES',
@@ -106,13 +109,13 @@ base_spec = Gem::Specification.new do |spec|
   spec.homepage = "http://rubyforge.org/projects/ruby-debug19/"
   spec.summary = "Fast Ruby debugger - core component"
   spec.description = <<-EOF
-ruby-debug is a fast implementation of the standard Ruby debugger debug.rb.
+ruby-debug-base19 is a fast implementation of the standard Ruby debugger debug.rb.
 It is implemented by utilizing a new Ruby C API hook. The core component 
 provides support that front-ends can build on. It provides breakpoint 
 handling, bindings for stack frames among other things.
 EOF
 
-  spec.version = "0.12.0"
+  spec.version = RUBY_DEBUG_VERSION + RUBY_DEBUG_BASE_TEENY
 
   spec.authors = ["Kent Sibilev", "Mark Moseley"]
   spec.email = "mark@fast-software.com"
@@ -138,12 +141,12 @@ cli_spec = Gem::Specification.new do |spec|
   spec.name = "ruby-debug19"
   
   spec.homepage = "http://rubyforge.org/projects/ruby-debug19/"
-  spec.summary = "Command line interface (CLI) for ruby-debug-base"
+  spec.summary = "Command line interface (CLI) for ruby-debug-base19"
   spec.description = <<-EOF
 A generic command line interface for ruby-debug.
 EOF
 
-  spec.version = "0.11.7"
+  spec.version = RUBY_DEBUG_VERSION + RUBY_DEBUG_TEENY
 
   spec.authors = ["Kent Sibilev", "Mark Moseley"]
   spec.email = "mark@fast-software.com"
