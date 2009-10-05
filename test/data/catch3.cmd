@@ -6,5 +6,5 @@ set autoeval off
 set basename on
 c
 w
-sk
+jump +1
 c
