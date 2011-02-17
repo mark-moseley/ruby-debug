@@ -12,6 +12,10 @@ hdrs = proc {
   have_header("insns_info.inc") and have_header("eval_intern.h")
 }
 
+if RUBY_VERSION == '1.9.1'
+  $CFLAGS << ' -DRUBY_VERSION_1_9_1'
+end
+
 if RUBY_REVISION >= 26959 # rb_iseq_compile_with_option was added an argument filepath
   $CFLAGS << ' -DRB_ISEQ_COMPILE_6ARGS'
 end

@@ -19,10 +19,6 @@
 #define min(x,y) ((x) < (y) ? (x) : (y))
 #endif
 
-#if RUBY_VERSION_MAJOR == 1 && RUBY_VERSION_MINOR == 9 && RUBY_VERSION_TEENY == 1 && RUBY_PATCHLEVEL >= 0
-#define RUBY_VERSION_1_9_1
-#endif
-
 RUBY_EXTERN int rb_vm_get_sourceline(const rb_control_frame_t *cfp); /* from vm.c */
 
 /* from iseq.c */
