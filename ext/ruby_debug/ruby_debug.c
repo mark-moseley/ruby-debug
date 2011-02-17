@@ -24,7 +24,13 @@
 #endif
 
 RUBY_EXTERN int rb_vm_get_sourceline(const rb_control_frame_t *cfp); /* from vm.c */
-RUBY_EXTERN VALUE rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE line, VALUE opt); /* from iseq.c */
+
+/* from iseq.c */
+#ifdef RB_ISEQ_COMPILE_6ARGS
+RUBY_EXTERN VALUE rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, VALUE opt);
+#else
+RUBY_EXTERN VALUE rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE line, VALUE opt);
+#endif
 
 typedef struct {
     st_table *tbl;
@@ -344,8 +350,13 @@ create_catch_table(debug_context_t *debug_context, unsigned long cont)
     GET_THREAD()->mild_compile_error++;
     /* compiling with option Qfalse (no options) prevents debug hook calls during this catch routine
      */
+#ifdef RB_ISEQ_COMPILE_6ARGS
+    catch_table->iseq = rb_iseq_compile_with_option(
+        rb_str_new_cstr(""), rb_str_new_cstr("(exception catcher)"), Qnil, INT2FIX(1), Qfalse);
+#else
     catch_table->iseq = rb_iseq_compile_with_option(
         rb_str_new_cstr(""), rb_str_new_cstr("(exception catcher)"), INT2FIX(1), Qfalse);
+#endif
     GET_THREAD()->mild_compile_error--;
     GET_THREAD()->parse_in_eval--;
 

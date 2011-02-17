@@ -12,6 +12,10 @@ hdrs = proc {
   have_header("insns_info.inc") and have_header("eval_intern.h")
 }
 
+if RUBY_REVISION >= 26959 # rb_iseq_compile_with_option was added an argument filepath
+  $CFLAGS << ' -DRB_ISEQ_COMPILE_6ARGS'
+end
+
 dir_config("ruby")
 if !Ruby_core_source::create_makefile_with_core(hdrs, "ruby_debug")
   STDERR.print("Makefile creation failed\n")
