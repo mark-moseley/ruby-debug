@@ -49,13 +49,9 @@ module Debugger
       @history_length = ENV["HISTSIZE"] ? ENV["HISTSIZE"].to_i : 256  
       @histfile = File.join(ENV["HOME"]||ENV["HOMEPATH"]||".", 
                             FILE_HISTORY)
-      open(@histfile, 'r') do |file|
-        file.each do |line|
-          line.chomp!
-          Readline::HISTORY << line
-        end
-      end if File.exist?(@histfile)
-      @restart_file = nil
+      if Debugger.respond_to?(:load_history)
+        Debugger.load_history
+      end
     end
 
     def read_command(prompt)
@@ -94,8 +90,6 @@ module Debugger
         @have_readline = true
         define_method(:save_history) do
           iface = self.handler.interface
-          iface.histfile ||= File.join(ENV["HOME"]||ENV["HOMEPATH"]||".", 
-                                  FILE_HISTORY)
           open(iface.histfile, 'w') do |file|
             Readline::HISTORY.to_a.last(iface.history_length).each do |line|
               file.puts line unless line.strip.empty?
@@ -103,6 +97,17 @@ module Debugger
           end rescue nil
         end
         public :save_history 
+
+        define_method(:load_history) do
+          iface = self.handler.interface
+          open(iface.histfile, 'r') do |file|
+            file.each do |line|
+              line.chomp!
+              Readline::HISTORY << line
+            end
+          end if File.exist?(iface.histfile)
+        end
+        public :load_history
       end
       Debugger.debug_at_exit do 
         finalize if respond_to?(:finalize)
