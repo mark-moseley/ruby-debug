@@ -11,13 +11,13 @@ hdrs = proc {
     have_struct_member("rb_method_entry_t", "called_id", "method.h") or
     have_struct_member("rb_control_frame_t", "method_id", "method.h")
   end and
+  begin
+    have_func("rb_method_entry", "method.h") or
+    have_func("rb_method_node", "node.h")
+  end and
   have_header("vm_core.h") and have_header("iseq.h") and have_header("insns.inc") and
   have_header("insns_info.inc") and have_header("eval_intern.h")
 }
-
-if RUBY_VERSION == '1.9.1'
-  $CFLAGS << ' -DRUBY_VERSION_1_9_1'
-end
 
 if RUBY_REVISION >= 26959 # rb_iseq_compile_with_option was added an argument filepath
   $CFLAGS << ' -DRB_ISEQ_COMPILE_6ARGS'

@@ -147,7 +147,7 @@ real_class(VALUE klass)
 inline static void *
 ruby_method_ptr(VALUE class, ID meth_id)
 {
-#ifdef RUBY_VERSION_1_9_1
+#ifndef HAVE_RB_METHOD_ENTRY
     NODE *body, *method;
     st_lookup(RCLASS_M_TBL(class), meth_id, (st_data_t *)&body);
     method = (NODE *)body->u2.value;
@@ -1282,9 +1282,9 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     case RUBY_EVENT_C_RETURN:
     {
         /* note if a block is given we fall through! */
-#ifdef RUBY_VERSION_1_9_1
+#if defined HAVE_RB_METHOD_NODE
         if(!rb_method_node(klass, mid) || !c_call_new_frame_p(klass, mid))
-#else
+#elif defined HAVE_RB_METHOD_ENTRY
         if(!rb_method_entry(klass, mid) || !c_call_new_frame_p(klass, mid))
 #endif
             break;
