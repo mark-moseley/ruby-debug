@@ -214,6 +214,8 @@ threadptr_data_type(void)
 
 #define ruby_threadptr_data_type *threadptr_data_type()
 
+#define ruby_current_thread ((rb_thread_t *)RTYPEDDATA_DATA(rb_thread_current()))
+
 static int
 is_in_locked(VALUE thread_id)
 {
