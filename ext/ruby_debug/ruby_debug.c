@@ -1854,9 +1854,9 @@ context_frame_id(int argc, VALUE *argv, VALUE self)
     cfp = GET_CFP;
     if (cfp->iseq == NULL || cfp->iseq->defined_method_id == 0) return(Qnil);
 
-#ifdef RUBY_VERSION_1_9_1
+#if defined HAVE_RB_CONTROL_FRAME_T_METHOD_ID
     return(RUBYVM_CFUNC_FRAME_P(cfp) ? ID2SYM(cfp->method_id) : ID2SYM(cfp->iseq->defined_method_id));
-#else
+#elif defined HAVE_RB_METHOD_ENTRY_T_CALLED_ID
     return(RUBYVM_CFUNC_FRAME_P(cfp) ? ID2SYM(cfp->me->called_id) : ID2SYM(cfp->iseq->defined_method_id));
 #endif
 }

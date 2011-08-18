@@ -7,7 +7,10 @@ if RUBY_VERSION < "1.9"
 end
 
 hdrs = proc {
-  have_struct_member("rb_method_entry_t", "def", "method.h")
+  begin
+    have_struct_member("rb_method_entry_t", "called_id", "method.h") or
+    have_struct_member("rb_control_frame_t", "method_id", "method.h")
+  end and
   have_header("vm_core.h") and have_header("iseq.h") and have_header("insns.inc") and
   have_header("insns_info.inc") and have_header("eval_intern.h")
 }
