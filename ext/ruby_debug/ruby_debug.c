@@ -201,6 +201,19 @@ context_thread_0(debug_context_t *debug_context)
     return id2ref(debug_context->thread_id);
 }
 
+static inline const rb_data_type_t *
+threadptr_data_type(void)
+{
+    static const rb_data_type_t *thread_data_type;
+    if (!thread_data_type) {
+	VALUE current_thread = rb_thread_current();
+	thread_data_type = RTYPEDDATA_TYPE(current_thread);
+    }
+    return thread_data_type;
+}
+
+#define ruby_threadptr_data_type *threadptr_data_type()
+
 static int
 is_in_locked(VALUE thread_id)
 {
