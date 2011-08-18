@@ -20,7 +20,7 @@ hdrs = proc {
 }
 
 if RUBY_REVISION >= 26959 # rb_iseq_compile_with_option was added an argument filepath
-  $CFLAGS << ' -DRB_ISEQ_COMPILE_6ARGS'
+  $defs << '-DRB_ISEQ_COMPILE_5ARGS'
 end
 
 dir_config("ruby")
