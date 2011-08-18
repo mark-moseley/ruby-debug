@@ -16,12 +16,17 @@ hdrs = proc {
     have_func("rb_method_node", "node.h")
   end and
   have_header("vm_core.h") and have_header("iseq.h") and have_header("insns.inc") and
-  have_header("insns_info.inc") and have_header("eval_intern.h")
+  have_header("insns_info.inc") and have_header("eval_intern.h") or break
+  if checking_for(checking_message("if rb_iseq_compile_with_option was added an argument filepath")) do
+      try_compile(<<SRC)
+#include <ruby.h>
+#include "vm_core.h"
+extern VALUE rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath);
+SRC
+    end
+    $defs << '-DRB_ISEQ_COMPILE_5ARGS'
+  end
 }
-
-if RUBY_REVISION >= 26959 # rb_iseq_compile_with_option was added an argument filepath
-  $defs << '-DRB_ISEQ_COMPILE_5ARGS'
-end
 
 dir_config("ruby")
 if !Ruby_core_source::create_makefile_with_core(hdrs, "ruby_debug")
