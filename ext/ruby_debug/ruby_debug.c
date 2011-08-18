@@ -567,7 +567,6 @@ debug_is_started(VALUE self)
 static void
 debug_context_mark(void *data)
 {
-    int i;
     debug_context_t *debug_context = (debug_context_t *)data;
     rb_gc_mark(debug_context->breakpoint);
 }
