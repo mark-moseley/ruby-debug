@@ -115,7 +115,7 @@ get_event_name(rb_event_flag_t event)
   }
 }
 
-static void 
+static void
 debug_runtime_error(debug_context_t *debug_context, const char *err)
 {
     if (debug_context != NULL) CTX_FL_SET(debug_context, CTX_FL_IGNORE);
@@ -394,7 +394,7 @@ FUNC_FASTCALL(do_jump)(rb_thread_t *th, rb_control_frame_t *cfp)
     cfp->pc[-2] = debug_context->saved_jump_ins[0];
     cfp->pc[-1] = debug_context->saved_jump_ins[1];
 
-    if ((debug_context->jump_pc < debug_context->jump_cfp->iseq->iseq_encoded) || 
+    if ((debug_context->jump_pc < debug_context->jump_cfp->iseq->iseq_encoded) ||
         (debug_context->jump_pc >= debug_context->jump_cfp->iseq->iseq_encoded + debug_context->jump_cfp->iseq->iseq_size))
         debug_runtime_error(debug_context, "Invalid jump PC target");
 
@@ -435,7 +435,7 @@ FUNC_FASTCALL(do_jump)(rb_thread_t *th, rb_control_frame_t *cfp)
         } while (cfp <= jump_cfp);
 
         jump_cfp->iseq->catch_table_size = 1;
-        jump_cfp->iseq->catch_table = 
+        jump_cfp->iseq->catch_table =
             create_catch_table(debug_context, jump_pc - jump_cfp->iseq->iseq_encoded);
         jump_cfp->iseq->catch_table->sp = -1;
 
@@ -459,7 +459,7 @@ FUNC_FASTCALL(do_catchall)(rb_thread_t *th, rb_control_frame_t *cfp)
     if (debug_context == NULL)
         debug_runtime_error(NULL, "Lost context in catchall");
     if (debug_context->saved_frames == NULL)
-        return(cfp); /* re-throw exception */ 
+        return(cfp); /* re-throw exception */
 
     if (CTX_FL_TEST(debug_context, CTX_FL_RETHROW))
     {
@@ -683,7 +683,7 @@ static VALUE
 call_at_line(VALUE context, debug_context_t *debug_context, VALUE file, VALUE line)
 {
     VALUE args;
-    
+
     last_debugged_thnum = debug_context->thnum;
     save_current_position(debug_context);
 
@@ -779,7 +779,7 @@ c_call_new_frame_p(VALUE klass, ID mid)
     return 0;
 }
 
-static void 
+static void
 call_at_line_check(VALUE self, debug_context_t *debug_context, VALUE breakpoint, VALUE context, const char *file, int line)
 {
     debug_context->stop_reason = CTX_STOP_STEP;
@@ -855,7 +855,7 @@ FUNC_FASTCALL(do_catch)(rb_thread_t *th, rb_control_frame_t *cfp)
     cfp->pc[-1] = debug_context->saved_jump_ins[1];
 
     cfp->pc = debug_context->jump_pc;
-    
+
     debug_context->jump_pc = NULL;
     debug_context->jump_cfp = NULL;
 
@@ -910,7 +910,7 @@ set_cfp(debug_context_t *debug_context)
     {
         if (cfp->iseq != NULL)
         {
-            if (cfp->pc != NULL) 
+            if (cfp->pc != NULL)
             {
                 if ((cfp_count < debug_context->cfp_count) && (debug_context->cfp[cfp_count] != cfp))
                     has_changed = 1;
@@ -944,7 +944,7 @@ set_cfp(debug_context_t *debug_context)
     }
 }
 
-static void 
+static void
 save_frames(debug_context_t *debug_context)
 {
     int size;
@@ -967,7 +967,7 @@ save_frames(debug_context_t *debug_context)
     debug_context->catch_cfp = GET_THREAD()->cfp;
     ZFREE(debug_context->saved_frames);
 
-    size = sizeof(rb_control_frame_t) * 
+    size = sizeof(rb_control_frame_t) *
         ((debug_context->cfp[debug_context->cfp_count-1] - debug_context->cfp[0]) + 1);
     debug_context->saved_frames = (rb_control_frame_t*)malloc(size);
     memcpy(debug_context->saved_frames, debug_context->cfp[0], size);
@@ -1118,9 +1118,9 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
         if (iseq->type == ISEQ_TYPE_ENSURE)
         {
             /* don't allow "ensure" blocks to execute yet: jump out of here by re-throwing exception */
-            VALUE *jump_pc = 
+            VALUE *jump_pc =
                 iseq->iseq_encoded + iseq->iseq_size - insn_len(BIN(getdynamic)) - insn_len(BIN(throw));
-                
+
             if (jump_pc[0] != bin_getdynamic || jump_pc[insn_len(BIN(getdynamic))] != bin_throw)
                 debug_runtime_error(debug_context, "Unexpected instructions in ENSURE block");
 
@@ -1189,7 +1189,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     /* make sure all threads have event flag set so we'll get its events */
     st_foreach(th->vm->living_threads, set_thread_event_flag_i, 0);
 
-    if (debug_context->thread_pause) 
+    if (debug_context->thread_pause)
     {
         debug_context->thread_pause = 0;
         debug_context->stop_next = 1;
@@ -1198,7 +1198,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     }
 
     /* ignore a skipped section of code */
-    if (CTX_FL_TEST(debug_context, CTX_FL_SKIPPED)) 
+    if (CTX_FL_TEST(debug_context, CTX_FL_SKIPPED))
         goto cleanup;
 
     debug_context->cur_cfp = th->cfp;
@@ -1214,7 +1214,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     {
         CTX_FL_SET(debug_context, CTX_FL_ENABLE_BKPT);
         moved = 1;
-    } 
+    }
 
     if(event != RUBY_EVENT_LINE)
         CTX_FL_SET(debug_context, CTX_FL_STEPPED);
@@ -1228,7 +1228,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
             int hit_count;
 
             /* send catchpoint notification */
-            hit_count = INT2FIX(FIX2INT(rb_hash_aref(rdebug_catchpoints, 
+            hit_count = INT2FIX(FIX2INT(rb_hash_aref(rdebug_catchpoints,
                 debug_context->catch_table.mod_name)+1));
             rb_hash_aset(rdebug_catchpoints, debug_context->catch_table.mod_name, hit_count);
             debug_context->stop_reason = CTX_STOP_CATCHPOINT;
@@ -1250,7 +1250,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
                 debug_context->stop_next--;
             if(debug_context->stop_next < 0)
                 debug_context->stop_next = -1;
-            if(moved || (CTX_FL_TEST(debug_context, CTX_FL_STEPPED) && 
+            if(moved || (CTX_FL_TEST(debug_context, CTX_FL_STEPPED) &&
                         !CTX_FL_TEST(debug_context, CTX_FL_FORCE_MOVE)))
             {
                 debug_context->stop_line--;
@@ -1321,7 +1321,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     }
 
 cleanup:
-  
+
     debug_context->stop_reason = CTX_STOP_NONE;
 
     /* check that all contexts point to alive threads */
@@ -1608,7 +1608,7 @@ debug_thread_inherited(VALUE klass)
  *   +stop+ parameter forces the debugger to stop at the first line of code in the +file+
  *   +increment_start+ determines if start_count should be incremented. When
  *    control threads are used, they have to be set up before loading the
- *    debugger; so here +increment_start+ will be false.    
+ *    debugger; so here +increment_start+ will be false.
  *   FOR INTERNAL USE ONLY.
  */
 static VALUE
@@ -1617,8 +1617,8 @@ debug_debug_load(int argc, VALUE *argv, VALUE self)
     VALUE file, stop, context, increment_start;
     debug_context_t *debug_context;
     int state = 0;
-    
-    if(rb_scan_args(argc, argv, "12", &file, &stop, &increment_start) == 1) 
+
+    if(rb_scan_args(argc, argv, "12", &file, &stop, &increment_start) == 1)
     {
         stop = Qfalse;
         increment_start = Qtrue;
@@ -1633,7 +1633,7 @@ debug_debug_load(int argc, VALUE *argv, VALUE self)
     /* Initializing $0 to the script's path */
     ruby_script(RSTRING_PTR(file));
     rb_load_protect(file, 0, &state);
-    if (0 != state) 
+    if (0 != state)
     {
         VALUE errinfo = rb_errinfo();
         debug_suspend(self);
@@ -1642,7 +1642,7 @@ debug_debug_load(int argc, VALUE *argv, VALUE self)
         return errinfo;
     }
 
-    /* We should run all at_exit handler's in order to provide, 
+    /* We should run all at_exit handler's in order to provide,
      * for instance, a chance to run all defined test cases */
     rb_exec_end_proc();
 
@@ -1808,7 +1808,7 @@ check_frame_number(debug_context_t *debug_context, VALUE frame)
     return frame_n;
 }
 
-static int 
+static int
 optional_frame_position(int argc, VALUE *argv)
 {
   unsigned int i_scanned;
@@ -1934,7 +1934,7 @@ context_frame_locals(int argc, VALUE *argv, VALUE self)
     rb_control_frame_t *cfp;
     rb_iseq_t *iseq;
     VALUE hash;
-    
+
     frame = optional_frame_position(argc, argv);
     Data_Get_Struct(self, debug_context_t, debug_context);
     cfp = GET_CFP;
@@ -2000,7 +2000,7 @@ context_frame_self(int argc, VALUE *argv, VALUE self)
 {
     VALUE frame;
     debug_context_t *debug_context;
-    
+
     frame = optional_frame_position(argc, argv);
     Data_Get_Struct(self, debug_context_t, debug_context);
 
@@ -2011,7 +2011,7 @@ context_frame_self(int argc, VALUE *argv, VALUE self)
  *   call-seq:
  *      context.frame_class(frame_position) -> obj
  *
- *   Returns the real class of the frame. 
+ *   Returns the real class of the frame.
  *   It could be different than context.frame_self(frame).class
  */
 static VALUE
@@ -2021,7 +2021,7 @@ context_frame_class(int argc, VALUE *argv, VALUE self)
     VALUE frame;
     debug_context_t *debug_context;
     rb_control_frame_t *cfp;
-    
+
     frame = optional_frame_position(argc, argv);
     Data_Get_Struct(self, debug_context_t, debug_context);
     cfp = GET_CFP;
@@ -2136,7 +2136,7 @@ context_thnum(VALUE self)
     debug_context_t *debug_context;
 
     Data_Get_Struct(self, debug_context_t, debug_context);
-    
+
     return INT2FIX(debug_context->thnum);
 }
 
@@ -2284,7 +2284,7 @@ context_dead(VALUE self)
 /*
  *   call-seq:
  *      context.stop_reason -> sym
- *   
+ *
  *   Returns the reason for the stop. It maybe of the following values:
  *   :initial, :step, :breakpoint, :catchpoint, :post-mortem
  */
@@ -2295,7 +2295,7 @@ context_stop_reason(VALUE self)
     const char * sym_name;
 
     Data_Get_Struct(self, debug_context_t, debug_context);
-    
+
     switch(debug_context->stop_reason)
     {
         case CTX_STOP_STEP:
@@ -2313,7 +2313,7 @@ context_stop_reason(VALUE self)
     }
     if(CTX_FL_TEST(debug_context, CTX_FL_DEAD))
         sym_name = "post-mortem";
-    
+
     return ID2SYM(rb_intern(sym_name));
 }
 
@@ -2437,9 +2437,9 @@ Init_context()
     rb_define_method(cContext, "stack_inc", context_stack_inc, 0);
     rb_define_method(cContext, "stack_dec", context_stack_dec, 0);
     rb_define_method(cContext, "dead?", context_dead, 0);
-    rb_define_method(cContext, "breakpoint", 
+    rb_define_method(cContext, "breakpoint",
              context_breakpoint, 0);      /* in breakpoint.c */
-    rb_define_method(cContext, "set_breakpoint", 
+    rb_define_method(cContext, "set_breakpoint",
              context_set_breakpoint, -1); /* in breakpoint.c */
     rb_define_method(cContext, "jump", context_jump, 2);
     rb_define_method(cContext, "pause", context_pause, 0);
@@ -2517,12 +2517,12 @@ Init_ruby_debug()
     rb_define_module_function(mDebugger, "started?", debug_is_started, 0);
     rb_define_module_function(mDebugger, "breakpoints", debug_breakpoints, 0);
     rb_define_module_function(mDebugger, "add_breakpoint", debug_add_breakpoint, -1);
-    rb_define_module_function(mDebugger, "remove_breakpoint", 
-                  rdebug_remove_breakpoint, 
+    rb_define_module_function(mDebugger, "remove_breakpoint",
+                  rdebug_remove_breakpoint,
                   1);                        /* in breakpoint.c */
-    rb_define_module_function(mDebugger, "add_catchpoint", 
+    rb_define_module_function(mDebugger, "add_catchpoint",
                   rdebug_add_catchpoint, 1); /* in breakpoint.c */
-    rb_define_module_function(mDebugger, "catchpoints", 
+    rb_define_module_function(mDebugger, "catchpoints",
                   debug_catchpoints, 0);     /* in breakpoint.c */
     rb_define_module_function(mDebugger, "last_context", debug_last_interrupted, 0);
     rb_define_module_function(mDebugger, "contexts", debug_contexts, 0);
@@ -2544,7 +2544,7 @@ Init_ruby_debug()
     cThreadsTable = rb_define_class_under(mDebugger, "ThreadsTable", rb_cObject);
 
     cDebugThread  = rb_define_class_under(mDebugger, "DebugThread", rb_cThread);
-    rb_define_singleton_method(cDebugThread, "inherited", 
+    rb_define_singleton_method(cDebugThread, "inherited",
                    debug_thread_inherited, 1);
 
     Init_context();
