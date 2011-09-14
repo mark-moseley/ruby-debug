@@ -144,55 +144,16 @@ real_class(VALUE klass)
     return klass;
 }
 
-inline static void *
-ruby_method_ptr(VALUE class, ID meth_id)
-{
-#ifndef HAVE_RB_METHOD_ENTRY
-    NODE *body, *method;
-    st_lookup(RCLASS_M_TBL(class), meth_id, (st_data_t *)&body);
-    method = (NODE *)body->u2.value;
-    return (void *)method->u2.node->u1.value;
-#else
-    rb_method_entry_t * method;
-    method = rb_method_entry(class, meth_id);
-#ifdef HAVE_ST_BODY
-    return (void *)method->body.cfunc.func;
-#else
-    return (void *)method->def->body.cfunc.func;
-#endif
-#endif
-}
-
 inline static VALUE
 ref2id(VALUE obj)
 {
-    return rb_obj_id(obj);
+    return obj;
 }
 
-static VALUE
-id2ref_unprotected(VALUE id)
-{
-    typedef VALUE (*id2ref_func_t)(VALUE, VALUE);
-    static id2ref_func_t f_id2ref = NULL;
-    if(f_id2ref == NULL)
-    {
-        f_id2ref = (id2ref_func_t)ruby_method_ptr(rb_mObjectSpace, rb_intern("_id2ref"));
-    }
-    return f_id2ref(rb_mObjectSpace, id);
-}
-
-static VALUE
-id2ref_error()
-{
-    if(debug_flag == Qtrue)
-        rb_p(rb_errinfo());
-    return Qnil;
-}
-
-static VALUE
+inline static VALUE
 id2ref(VALUE id)
 {
-    return rb_rescue(id2ref_unprotected, id, id2ref_error, 0);
+    return id;
 }
 
 inline static VALUE
@@ -310,13 +271,9 @@ threads_table_clear(VALUE table)
 static VALUE
 is_thread_alive(VALUE thread)
 {
-    typedef VALUE (*thread_alive_func_t)(VALUE);
-    static thread_alive_func_t f_thread_alive = NULL;
-    if(!f_thread_alive)
-    {
-        f_thread_alive = (thread_alive_func_t)ruby_method_ptr(rb_cThread, rb_intern("alive?"));
-    }
-    return f_thread_alive(thread);
+    rb_thread_t *th;
+    GetThreadPtr(thread, th);
+    return th->status != THREAD_KILLED;
 }
 
 static int
