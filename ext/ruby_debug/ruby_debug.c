@@ -1289,11 +1289,7 @@ debug_event_hook(rb_event_flag_t event, VALUE data, VALUE self, ID mid, VALUE kl
     case RUBY_EVENT_C_RETURN:
     {
         /* note if a block is given we fall through! */
-#if defined HAVE_RB_METHOD_NODE
-        if(!rb_method_node(klass, mid) || !c_call_new_frame_p(klass, mid))
-#elif defined HAVE_RB_METHOD_ENTRY
-        if(!rb_method_entry(klass, mid) || !c_call_new_frame_p(klass, mid))
-#endif
+        if(!rb_method_boundp(klass, mid, 0) || !c_call_new_frame_p(klass, mid))
             break;
     }
     case RUBY_EVENT_RETURN:
