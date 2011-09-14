@@ -678,36 +678,17 @@ filename_cmp(VALUE source, const char *file)
     return 1;
 }
 
-static void
-binding_free(void *ptr)
-{
-    rb_binding_t *bind;
-    RUBY_FREE_ENTER("binding");
-    if (ptr) {
-	bind = ptr;
-	ruby_xfree(ptr);
-    }
-    RUBY_FREE_LEAVE("binding");
-}
-
-static void
-binding_mark(void *ptr)
-{
-    rb_binding_t *bind;
-    RUBY_MARK_ENTER("binding");
-    if (ptr) {
-	bind = ptr;
-	RUBY_MARK_UNLESS_NULL(bind->env);
-    }
-    RUBY_MARK_LEAVE("binding");
-}
-
 static VALUE
 binding_alloc(VALUE klass)
 {
     VALUE obj;
     rb_binding_t *bind;
-    obj = Data_Make_Struct(klass, rb_binding_t, binding_mark, binding_free, bind);
+    static const rb_data_type_t *binding_data_type;
+    if (!binding_data_type) {
+        VALUE b = rb_binding_new();
+        binding_data_type = RTYPEDDATA_TYPE(b);
+    }
+    obj = TypedData_Make_Struct(klass, rb_binding_t, binding_data_type, bind);
     return obj;
 }
 
