@@ -267,18 +267,11 @@ remove_from_locked()
     return thread;
 }
 
-static int
-threads_table_mark_keyvalue(VALUE key, VALUE value, int dummy)
-{
-    rb_gc_mark(value);
-    return ST_CONTINUE;
-}
-
 static void
 threads_table_mark(void* data)
 {
     threads_table_t *threads_table = (threads_table_t*)data;
-    st_foreach(threads_table->tbl, threads_table_mark_keyvalue, 0);
+    rb_mark_tbl(threads_table->tbl);
 }
 
 static void
