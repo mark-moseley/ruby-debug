@@ -879,17 +879,21 @@ static void
 save_frames(debug_context_t *debug_context)
 {
     int size;
+    VALUE thread;
+    rb_thread_t *th;
 
     if (debug_context->cfp_count == 0)
         return;
 
     /* save the entire call frame state */
+    thread = rb_thread_current();
+    GetThreadPtr(thread, th);
     for (size = 0; size < debug_context->cfp_count; size++)
     {
         rb_binding_t *bind;
         VALUE bindval = binding_alloc(rb_cBinding);
         GetBindingPtr(bindval, bind);
-        bind->env = rb_vm_make_env_object(GET_THREAD(), debug_context->cfp[size]);
+        bind->env = rb_vm_make_env_object(th, debug_context->cfp[size]);
     }
 
     debug_context->catch_table.mod_name = rb_obj_class(rb_errinfo());
