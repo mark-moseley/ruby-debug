@@ -751,6 +751,10 @@ set_thread_event_flag_i(st_data_t key, st_data_t val, st_data_t flag)
 static int
 find_prev_line_start(rb_control_frame_t *cfp)
 {
+#if defined HAVE_TYPE_STRUCT_ISEQ_LINE_INFO_ENTRY
+    const rb_iseq_t *iseq = cfp->iseq;
+    return rb_iseq_line_no(iseq, cfp->pc - iseq->iseq_encoded - 1);
+#else
     int i, pos, line_no;
     pos = cfp->pc - cfp->iseq->iseq_encoded;
     for (i = 0; i < cfp->iseq->insn_info_size; i++)
@@ -773,6 +777,7 @@ find_prev_line_start(rb_control_frame_t *cfp)
         return(pos);
     }
     return(-1);
+#endif
 }
 
 static rb_control_frame_t *
