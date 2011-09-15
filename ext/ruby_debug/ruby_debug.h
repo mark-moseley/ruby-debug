@@ -66,7 +66,13 @@ typedef struct {
 //
     struct RData catch_rdata;
     struct rb_iseq_struct catch_iseq;
+#if defined HAVE_TYPE_STRUCT_ISEQ_INSN_INFO_ENTRY
     struct iseq_insn_info_entry catch_info_entry;
+# define line_info_size insn_info_size
+# define line_info_table insn_info_table
+#elif defined HAVE_TYPE_STRUCT_ISEQ_LINE_INFO_ENTRY
+    struct iseq_line_info_entry catch_info_entry;
+#endif
     struct RNode catch_cref_stack;
     VALUE iseq_insn[7];
     VALUE local_table;

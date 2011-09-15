@@ -489,8 +489,8 @@ create_exception_catchall(debug_context_t *debug_context)
     debug_context->catch_iseq.iseq[6] = 0;
     debug_context->catch_iseq.iseq_size = sizeof(debug_context->iseq_insn) / sizeof(VALUE);
     debug_context->catch_iseq.mark_ary = rb_ary_new();
-    debug_context->catch_iseq.insn_info_table = &debug_context->catch_info_entry;
-    debug_context->catch_iseq.insn_info_size = 1;
+    debug_context->catch_iseq.line_info_table = &debug_context->catch_info_entry;
+    debug_context->catch_iseq.line_info_size = 1;
     debug_context->catch_iseq.local_size = 1;
     debug_context->catch_iseq.local_table = &debug_context->local_table;
     debug_context->catch_iseq.local_table[0] = rb_intern("#$!");
@@ -503,7 +503,9 @@ create_exception_catchall(debug_context_t *debug_context)
     debug_context->catch_iseq.cref_stack = &debug_context->catch_cref_stack;
     debug_context->catch_info_entry.position = 0;
     debug_context->catch_info_entry.line_no = 1;
+#if defined HAVE_TYPE_STRUCT_ISEQ_INSN_INFO_ENTRY
     debug_context->catch_info_entry.sp = 0;
+#endif
     debug_context->catch_cref_stack.flags = 1052;
 
     entry->type = CATCH_TYPE_RESCUE;
@@ -2261,9 +2263,9 @@ context_jump(VALUE self, VALUE line, VALUE file)
     {
         if ((cfp->iseq != NULL) && (rb_str_cmp(file, cfp->iseq->filename) == 0))
         {
-            for (i = 0; i < cfp->iseq->insn_info_size; i++)
+            for (i = 0; i < cfp->iseq->line_info_size; i++)
             {
-                if (cfp->iseq->insn_info_table[i].line_no != line)
+                if (cfp->iseq->line_info_table[i].line_no != line)
                     continue;
 
                 /* hijack the currently running code so that we can change the frame PC */
@@ -2274,7 +2276,7 @@ context_jump(VALUE self, VALUE line, VALUE file)
 
                 debug_context->jump_cfp = cfp;
                 debug_context->jump_pc =
-                    cfp->iseq->iseq_encoded + cfp->iseq->insn_info_table[i].position;
+                    cfp->iseq->iseq_encoded + cfp->iseq->line_info_table[i].position;
 
                 return(INT2FIX(0)); /* success */
             }
