@@ -749,28 +749,8 @@ set_thread_event_flag_i(st_data_t key, st_data_t val, st_data_t flag)
 static int
 find_prev_line_start(rb_control_frame_t *cfp)
 {
-    int i, pos, line_no;
-    pos = cfp->pc - cfp->iseq->iseq_encoded;
-    for (i = 0; i < cfp->iseq->insn_info_size; i++)
-    {
-        if (cfp->iseq->insn_info_table[i].position != pos)
-            continue;
-
-        if (i == 0) return(0); // TODO
-
-        pos = -1;
-        line_no = cfp->iseq->insn_info_table[--i].line_no;
-        do {
-            if (cfp->iseq->insn_info_table[i].line_no == line_no)
-                pos = cfp->iseq->insn_info_table[i].position;
-            else
-                break;
-            i--;
-        } while (i >= 0);
-
-        return(pos);
-    }
-    return(-1);
+    const rb_iseq_t *iseq = cfp->iseq;
+    return rb_iseq_line_no(iseq, cfp->pc - iseq->iseq_encoded - 1);
 }
 
 static rb_control_frame_t *
