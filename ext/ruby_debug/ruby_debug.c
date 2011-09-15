@@ -804,8 +804,8 @@ catch_exception(debug_context_t *debug_context, VALUE mod_name)
 {
     int prev_line_start;
     rb_control_frame_t *cfp = GET_THREAD()->cfp;
-	while (cfp->pc == 0 || cfp->iseq == 0)
-	    cfp++;
+    while (cfp->pc == 0 || cfp->iseq == 0)
+	cfp++;
 
     prev_line_start = find_prev_line_start(cfp);
     if (prev_line_start < 0)
