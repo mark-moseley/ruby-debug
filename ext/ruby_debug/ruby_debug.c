@@ -253,19 +253,13 @@ threads_table_create(void)
     return Data_Wrap_Struct(cThreadsTable, threads_table_mark, threads_table_free, threads_table);
 }
 
-static int
-threads_table_clear_i(st_data_t key, st_data_t value, st_data_t dummy)
-{
-    return ST_DELETE;
-}
-
 static void
 threads_table_clear(VALUE table)
 {
     threads_table_t *threads_table;
 
     Data_Get_Struct(table, threads_table_t, threads_table);
-    st_foreach(threads_table->tbl, threads_table_clear_i, 0);
+    st_clear(threads_table->tbl);
 }
 
 static VALUE
