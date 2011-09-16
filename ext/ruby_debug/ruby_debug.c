@@ -986,10 +986,11 @@ handle_raise_event(rb_thread_t *th, debug_context_t *debug_context)
         (debug_context->cfp_count == 0) ||
         CTX_FL_TEST(debug_context, CTX_FL_CATCHING) ||
 #ifdef _ST_NEW_
-        st_get_num_entries(RHASH_TBL(rdebug_catchpoints)) == 0)
+        st_get_num_entries(RHASH_TBL(rdebug_catchpoints)) == 0
 #else
-        (RHASH_TBL(rdebug_catchpoints)->num_entries) == 0)
+        (RHASH_TBL(rdebug_catchpoints)->num_entries) == 0
 #endif
+	)
     {
         if (catchall == Qfalse) return(1);
     }
