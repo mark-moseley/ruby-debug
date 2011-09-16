@@ -212,7 +212,7 @@ add_to_locked(VALUE thread)
 }
 
 static VALUE
-remove_from_locked()
+remove_from_locked(void)
 {
     VALUE thread;
     locked_thread_t *node;
@@ -244,7 +244,7 @@ threads_table_free(void* data)
 }
 
 static VALUE
-threads_table_create()
+threads_table_create(void)
 {
     threads_table_t *threads_table;
 
@@ -294,7 +294,7 @@ threads_table_check_i(VALUE key, VALUE value, VALUE dummy)
 }
 
 static void
-check_thread_contexts()
+check_thread_contexts(void)
 {
     threads_table_t *threads_table;
 
@@ -2346,7 +2346,7 @@ context_pause(VALUE self)
  *   Debugger keeps a single instance of this class for each Ruby thread.
  */
 static void
-Init_context()
+Init_context(void)
 {
     cContext = rb_define_class_under(mDebugger, "Context", rb_cObject);
     rb_define_method(cContext, "stop_next=", context_stop_next, -1);
@@ -2442,7 +2442,7 @@ VALUE translate_insns(VALUE bin)
  *   set/remove breakpoints, etc.
  */
 void
-Init_ruby_debug()
+Init_ruby_debug(void)
 {
     TRANSLATE_INSNS(opt_call_c_function);
     TRANSLATE_INSNS(getdynamic);
