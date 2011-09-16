@@ -262,7 +262,7 @@ threads_table_clear(VALUE table)
     st_clear(threads_table->tbl);
 }
 
-static VALUE
+static int
 is_thread_alive(VALUE thread)
 {
     rb_thread_t *th;
@@ -280,7 +280,7 @@ threads_table_check_i(st_data_t key, st_data_t value, st_data_t dummy)
     {
         return ST_DELETE;
     }
-    if(rb_protect(is_thread_alive, thread, 0) != Qtrue)
+    if(!is_thread_alive(thread))
     {
         return ST_DELETE;
     }
