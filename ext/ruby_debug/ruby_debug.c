@@ -254,7 +254,7 @@ threads_table_create(void)
 }
 
 static int
-threads_table_clear_i(VALUE key, VALUE value, VALUE dummy)
+threads_table_clear_i(st_data_t key, st_data_t value, st_data_t dummy)
 {
     return ST_DELETE;
 }
@@ -277,11 +277,11 @@ is_thread_alive(VALUE thread)
 }
 
 static int
-threads_table_check_i(VALUE key, VALUE value, VALUE dummy)
+threads_table_check_i(st_data_t key, st_data_t value, st_data_t dummy)
 {
     VALUE thread;
 
-    thread = id2ref(key);
+    thread = id2ref((VALUE)key);
     if(!rb_obj_is_kind_of(thread, rb_cThread))
     {
         return ST_DELETE;
@@ -740,7 +740,7 @@ call_at_line_check(VALUE self, debug_context_t *debug_context, VALUE breakpoint,
 static int
 set_thread_event_flag_i(st_data_t key, st_data_t val, st_data_t flag)
 {
-    VALUE thval = key;
+    VALUE thval = (VALUE)key;
     rb_thread_t *th;
     GetThreadPtr(thval, th);
     th->event_flags |= RUBY_EVENT_VM;
@@ -1310,10 +1310,11 @@ debug_stop(VALUE self)
 }
 
 static int
-find_last_context_func(VALUE key, VALUE value, VALUE *result)
+find_last_context_func(st_data_t key, st_data_t value, st_data_t result_arg)
 {
     debug_context_t *debug_context;
-    Data_Get_Struct(value, debug_context_t, debug_context);
+    VALUE *result = (VALUE *)result_arg;
+    Data_Get_Struct((VALUE)value, debug_context_t, debug_context);
     if(debug_context->thnum == last_debugged_thnum)
     {
         *result = value;
