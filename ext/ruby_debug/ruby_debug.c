@@ -228,11 +228,31 @@ remove_from_locked(void)
     return thread;
 }
 
+static int is_living_thread(VALUE thread);
+
+static int
+threads_table_mark_keyvalue(st_data_t key, st_data_t value, st_data_t tbl)
+{
+    VALUE thread = id2ref((VALUE)key);
+    if (!value) {
+        return ST_CONTINUE;
+    }
+    rb_gc_mark((VALUE)value);
+    if (is_living_thread(thread)) {
+	rb_gc_mark(thread);
+    }
+    else {
+	st_insert((st_table *)tbl, key, 0);
+    }
+    return ST_CONTINUE;
+}
+
 static void
 threads_table_mark(void* data)
 {
     threads_table_t *threads_table = (threads_table_t*)data;
-    rb_mark_tbl(threads_table->tbl);
+    st_table *tbl = threads_table->tbl;
+    st_foreach(tbl, threads_table_mark_keyvalue, (st_data_t)tbl);
 }
 
 static void
@@ -271,16 +291,22 @@ is_thread_alive(VALUE thread)
 }
 
 static int
+is_living_thread(VALUE thread)
+{
+    return rb_obj_is_kind_of(thread, rb_cThread) && is_thread_alive(thread);
+}
+
+static int
 threads_table_check_i(st_data_t key, st_data_t value, st_data_t dummy)
 {
     VALUE thread;
 
-    thread = id2ref((VALUE)key);
-    if(!rb_obj_is_kind_of(thread, rb_cThread))
+    if(!value)
     {
         return ST_DELETE;
     }
-    if(!is_thread_alive(thread))
+    thread = id2ref((VALUE)key);
+    if(!is_living_thread(thread))
     {
         return ST_DELETE;
     }
@@ -592,7 +618,7 @@ thread_context_lookup(VALUE thread, VALUE *context, debug_context_t **debug_cont
     }
     thread_id = ref2id(thread);
     Data_Get_Struct(rdebug_threads_tbl, threads_table_t, threads_table);
-    if(!st_lookup(threads_table->tbl, thread_id, context))
+    if(!st_lookup(threads_table->tbl, thread_id, context) || !*context)
     {
         if (create)
         {
@@ -1308,6 +1334,9 @@ find_last_context_func(st_data_t key, st_data_t value, st_data_t result_arg)
 {
     debug_context_t *debug_context;
     VALUE *result = (VALUE *)result_arg;
+    if(!value) {
+        return ST_CONTINUE;
+    }
     Data_Get_Struct((VALUE)value, debug_context_t, debug_context);
     if(debug_context->thnum == last_debugged_thnum)
     {
