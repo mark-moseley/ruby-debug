@@ -20,7 +20,7 @@ int
 check_breakpoint_hit_condition(VALUE breakpoint)
 {
     debug_breakpoint_t *debug_breakpoint;
-    
+
     if(breakpoint == Qnil)
         return 0;
     Data_Get_Struct(breakpoint, debug_breakpoint_t, debug_breakpoint);
@@ -100,7 +100,7 @@ check_breakpoints_by_pos(debug_context_t *debug_context, const char *file, int l
 
     if(!CTX_FL_TEST(debug_context, CTX_FL_ENABLE_BKPT))
         return Qnil;
-    
+
     if(check_breakpoint_by_pos(debug_context->breakpoint, file, line))
         return debug_context->breakpoint;
 
@@ -123,7 +123,7 @@ check_breakpoints_by_method(debug_context_t *debug_context, VALUE klass, ID mid,
 
     if(!CTX_FL_TEST(debug_context, CTX_FL_ENABLE_BKPT))
         return Qnil;
-        
+
     if(check_breakpoint_by_method(debug_context->breakpoint, klass, mid, self))
         return debug_context->breakpoint;
 
@@ -532,7 +532,7 @@ breakpoint_set_hit_condition(VALUE self, VALUE value)
 
     Data_Get_Struct(self, debug_breakpoint_t, breakpoint);
     id_value = rb_to_id(value);
-    
+
     if(rb_intern("greater_or_equal") == id_value || rb_intern("ge") == id_value)
         breakpoint->hit_condition = HIT_COND_GE;
     else if(rb_intern("equal") == id_value || rb_intern("eq") == id_value)
