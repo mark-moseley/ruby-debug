@@ -1,5 +1,5 @@
 /* Context info */
-enum ctx_stop_reason {CTX_STOP_NONE, CTX_STOP_STEP, CTX_STOP_BREAKPOINT, 
+enum ctx_stop_reason {CTX_STOP_NONE, CTX_STOP_STEP, CTX_STOP_BREAKPOINT,
 		      CTX_STOP_CATCHPOINT};
 
 /* Context flags */
@@ -66,7 +66,13 @@ typedef struct {
 //
     struct RData catch_rdata;
     struct rb_iseq_struct catch_iseq;
+#if defined HAVE_TYPE_STRUCT_ISEQ_INSN_INFO_ENTRY
     struct iseq_insn_info_entry catch_info_entry;
+# define line_info_size insn_info_size
+# define line_info_table insn_info_table
+#elif defined HAVE_TYPE_STRUCT_ISEQ_LINE_INFO_ENTRY
+    struct iseq_line_info_entry catch_info_entry;
+#endif
     struct RNode catch_cref_stack;
     VALUE iseq_insn[7];
     VALUE local_table;
@@ -91,7 +97,7 @@ classname_cmp(VALUE name, VALUE klass)
     VALUE class_name = (Qnil == name) ? rb_str_new2("main") : name;
     if (klass == Qnil) return(0);
     mod_name = rb_mod_name(klass);
-    return (mod_name != Qnil 
+    return (mod_name != Qnil
 	    && rb_str_cmp(class_name, mod_name) == 0);
 }
 
@@ -118,9 +124,9 @@ typedef struct {
 /* routines in breakpoint.c */
 extern int   check_breakpoint_expression(VALUE breakpoint, VALUE binding);
 extern int   check_breakpoint_hit_condition(VALUE breakpoint);
-extern VALUE check_breakpoints_by_method(debug_context_t *debug_context, 
+extern VALUE check_breakpoints_by_method(debug_context_t *debug_context,
     VALUE klass, ID mid, VALUE self);
-extern VALUE check_breakpoints_by_pos(debug_context_t *debug_context, 
+extern VALUE check_breakpoints_by_pos(debug_context_t *debug_context,
     const char *file, int line);
 extern VALUE create_breakpoint_from_args(int argc, VALUE *argv, int id);
 extern VALUE context_breakpoint(VALUE self);
