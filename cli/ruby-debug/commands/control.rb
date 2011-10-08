@@ -68,7 +68,7 @@ module Debugger
       def help(cmd)
         %{
           restart|R [args] 
-          Restart the program. This is is a re-exec - all debugger state
+          Restart the program. This is a re-exec - all debugger state
           is lost. If command arguments are passed those are used.
         }
       end
